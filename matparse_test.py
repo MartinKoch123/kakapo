@@ -1,5 +1,5 @@
 import unittest
-from archive import matparse as mp
+import matparse as mp
 import pyparsing as pp
 
 
@@ -36,21 +36,29 @@ class MatparseTest(unittest.TestCase):
             parse = lambda x: mp.reserved_keywords.parse_string(x)
             self.assertRaises(pp.ParseException, parse, s)
 
-    def test_matlab_name(self):
+    def test_identifier(self):
         positives = ["a", "TEST", "x_123", "a" * 63]
         for s in positives:
-            result = mp.matlab_name.parse_string(s)
+            result = mp.identifier.parse_string(s, parse_all=True)
             self.assertEqual([s], result.as_list())
 
         negatives = ["", "_a", "asd$", "a" * 64]
         for s in negatives:
-            parse = lambda x: mp.matlab_name.parse_string(x)
-            self.assertRaises(pp.ParseException, parse, s)
+            with self.assertRaises(pp.ParseException):
+                mp.identifier.parse_string(s, parse_all=True)
 
-    def test_keyword(self):
-        actual = mp.keyword("function").parse_string("function  ")[0]
-        expected = mp.Identifier(name="function", whitespace="  ")
-        self.assertEqual(expected, actual)
+    def test_output_arguments_list(self):
+        tests = (
+            ("a = ", ("", "a", "", " ", "=", " ")),
+            ("a, b = ", ("", "a", "", ",", " ", "b", "", " ", "=", " ")),
+            ("[a] = ", ("[", "a", "]", " ", "=", " ")),
+            ("[a,b,c] = ", ("[", "a", "", ",", "", "b", "", ",", "", "c", "]", " ", "=", " ")),
+        )
+
+        for string, expected_tokens in tests:
+            actual = mp.output_arguments.parse_string(string)[0]
+            expected = mp.OutputArgumentList(expected_tokens)
+            self.assertEqual(actual, expected)
 
 
 
