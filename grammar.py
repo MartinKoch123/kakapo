@@ -72,13 +72,15 @@ class ReservedKeyword(ParserElement):
 
 ParserElement.setDefaultWhitespaceChars("")
 
-nothing = Empty().set_parse_action(lambda s, loc, toks: [""])
+def nothing(n: int = 1):
+    return Empty().set_parse_action(lambda s, loc, toks: ["" for i in range(n)])
+
 
 """White space"""
-# ws = White(" \t\n")
-# ws = OneOrMore(ws | Literal("...")).parse_with_tabs()
-# ws.add_parse_action(lambda s, loc, toks: ["".join(toks)])
-ws = Word(" \t\n.").parse_with_tabs()
+ws = White(" \t\n")
+ws = OneOrMore(ws | Literal("...")).parse_with_tabs()
+ws.add_parse_action(lambda s, loc, toks: ["".join(toks)])
+# ws = Word(" \t\n.").parse_with_tabs()
 
 """Optional white space"""
 ows = Opt(ws, default="")
@@ -126,7 +128,7 @@ class DelimitedList(ParserElement):
             delimiter = Literal(delimiter)
         delimiter = ows + delimiter + ows
         if optional_delimiter:
-            delimiter = delimiter | White(" \t\n")
+            delimiter = delimiter | ws
         delimiter.add_parse_action(lambda s, loc, toks: ["".join(toks)])
         self.parser = (
             (
@@ -151,9 +153,9 @@ class Block(ParserElement):
     def __init__(self, name: str, content: ParserElement, optional_end: bool = False):
         super().__init__()
 
-        end = ws + Literal("end")
+        end = ws + Literal("end") + Opt(ows + Literal(";"), default=None).add_parse_action(lambda toks: ["", ""] if toks[0] is None else toks)
         if optional_end:
-            end |= nothing + nothing
+            end |= nothing(2)
 
         self.parser = (
             Literal(name)
@@ -189,6 +191,7 @@ def parenthesized(
     brackets: Sequence[tuple[str, str]] = (("(", ")"),),
     optional: bool = False,
 ):
+    # Turning this into a class was a lot slower for some reason
     with_parenthesis = Or(
         (
             opening_bracket
@@ -199,10 +202,11 @@ def parenthesized(
         ) for opening_bracket, closing_bracket in brackets
     )
     if not optional:
-        return with_parenthesis
-
-    without_parenthesis = nothing + content + nothing
-    return with_parenthesis | without_parenthesis
+        parser = with_parenthesis
+    else:
+        without_parenthesis = nothing(2) + content + nothing(2)
+        parser = with_parenthesis | without_parenthesis
+    return parser.add_parse_action(model.Parenthesized.from_tokens).set_name("Parenthesized")
 
 
 """
@@ -231,12 +235,17 @@ expression = Forward()
 array_delimiter = Literal(",") | Literal(";")
 array = parenthesized(
     DelimitedList(expression, min_elements=0, delimiter=array_delimiter, optional_delimiter=True),
-    brackets=(("[", "]"), ("{", "}"))
+    brackets=(
+        ("[", "]"),
+        ("{", "}")
+    )
 ).set_name("Array")
+
+call = Forward()
 
 output_arguments = (
     parenthesized(
-        DelimitedList(identifier),
+        DelimitedList(call),
         brackets=(("[", "]"),),
         optional=True,
     )
@@ -256,7 +265,7 @@ arguments_list = parenthesized(
 ).set_name("ArgumentsList")
 
 """A variable or a function call with or without arguments. Includes nested calls."""
-call = identifier + or_none(arguments_list[1, ...])
+call << (identifier + or_none(arguments_list[1, ...]))
 
 """
 Anonymous function definition
@@ -272,9 +281,13 @@ anonymous_function = (
     + expression
 )
 
-operand_atom = call | common.number | string | array | anonymous_function
-
+operand_atom = Forward()
 operand = Forward()
+operation = Forward()
+
+parenthesized_operation = parenthesized(operation).set_name("ParenthesizedOperation")
+
+operand_atom << (call | common.number | string | array | anonymous_function | parenthesized(operand_atom) | parenthesized_operation)
 
 left_operation = (Literal("-") | Literal("~")) + operand_atom
 right_operation = operand_atom + (Literal("'") | Literal(".'"))
@@ -282,16 +295,10 @@ right_operation = operand_atom + (Literal("'") | Literal(".'"))
 single_element_operation = left_operation | right_operation
 
 operand << (single_element_operation | operand_atom)
-operand.set_name("Element")
-
-operation = Forward()
-
-parenthesized_operation = parenthesized(operation).set_name("ParenthesizedOperation")
+operand.set_name("Operand")
 
 operation << DelimitedList(
-    parenthesized(
-        operand | parenthesized_operation,
-        optional=True),
+    parenthesized(operand, optional=True),
     delimiter=operator,
     min_elements=2
 ).set_name("Operation")
@@ -302,19 +309,22 @@ expression.set_name("Expression")
 keyword = Or(Literal(kw) for kw in ["return", "break", "continue"])
 
 """An assignment or an expression with either no result or an unused result."""
-statement = (
-    or_none(output_arguments)
-    + (expression | keyword)
+
+no_output_statement = (
+    (expression | keyword)
     + or_none(ows + FollowedBy(Literal(";")))
     + or_none(Literal(";"))
 )
+
+output_statement = output_arguments + no_output_statement
+statement = output_statement | no_output_statement
 
 code = Forward()
 
 elseif_block_part = (
     Literal("elseif")
     + ws
-    + expression
+    + no_output_statement
     + ws
     + code
 )
@@ -329,7 +339,7 @@ else_block_part = (
 if_block = Block(
     name="if",
     content=(
-        expression
+        no_output_statement
         + ws
         + code
         + ZeroOrMore(ws + elseif_block_part)
@@ -359,7 +369,7 @@ function = Block(
 
 catch = (
     Literal("catch")
-    + Opt(White(" \t") + expression, default=None).add_parse_action(lambda toks: ["", ""] if toks[0] is None else toks)
+    + Opt(White(" \t") + no_output_statement, default=None).add_parse_action(lambda toks: ["", ""] if toks[0] is None else toks)
     + ws
     + code
 )
@@ -382,7 +392,7 @@ parse_actions = {
     arguments_list: model.ArgumentsList,
     function: model.Function,
     call: model.Call,
-    output_arguments: model.OutputArgumentList,
+    output_arguments: model.OutputArguments,
     comment: model.Comment,
     operation: model.Operation,
     statement: model.Statement,

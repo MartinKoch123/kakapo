@@ -1,4 +1,5 @@
-from typing import Sequence
+from __future__ import annotations
+from typing import Sequence, Any
 
 
 class Element:
@@ -31,6 +32,21 @@ class Element:
             and len(self) == len(other)
             and all(own_child == other_child for own_child, other_child in zip(self, other))
         )
+
+    def iterate(self, types: Sequence):
+        for child in self:
+            if any(isinstance(child, type_) for type_ in types):
+                yield child
+            if isinstance(child, Element):
+                for grand_child in child.iterate(types):
+                    yield grand_child
+
+    def iterate_with_indent(self, level: int = 0):
+        for child in self:
+            yield child
+            if isinstance(child, Element):
+                for grand_child in child.iterate_with_indent():
+                    yield grand_child
 
     def pretty_string(self, indent_level: int = 0, compact: bool = False) -> str:
         indent = indent_level * 4 * " "
@@ -67,21 +83,28 @@ class Element:
 
 class ArgumentsList(Element):
 
-    _OPENING_PARENTHESIS = 0
-    _DELIMITED_LIST = 2
-    _CLOSING_PARENTHESIS = 4
+    _PARENTHESIZED = 0
 
     @property
-    def elements(self):
-        return self.children[self._DELIMITED_LIST].elements
-
-
-class OutputArgumentList(Element):
+    def arguments_list(self) -> DelimitedList:
+        return self.children[self._PARENTHESIZED].content
 
     @property
-    def elements(self):
-        delimited_list: DelimitedList = self.children[2]
-        return delimited_list.elements
+    def arguments(self):
+        return self.arguments_list.elements
+
+
+class OutputArguments(Element):
+
+    _PARENTHESIZED = 0
+
+    @property
+    def arguments_list(self) -> DelimitedList:
+        return self.children[self._PARENTHESIZED].content
+
+    @property
+    def arguments(self):
+        return self.arguments_list.elements
 
 
 class Call(Element):
@@ -128,6 +151,19 @@ class Operation(Element):
 
 class ParenthesizedOperation(Element):
     pass
+
+
+class Parenthesized(Element):
+
+    # 0: Bracket
+    # 1: Whitespace
+    # 2: Content
+    # 3: Whitespace
+    # 4: Bracket
+
+    @property
+    def content(self) -> Any:
+        return self.children[2]
 
 
 class Statement(Element):
