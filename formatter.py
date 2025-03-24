@@ -1,7 +1,7 @@
 import model
 
 
-def normalize_whitespace_in_arguments_list(code: model.Element):
+def normalize_whitespace_in_arguments_list(code: model.Composite):
     types = [model.OutputArguments, model.ArgumentsList]
     for output_arguments in code.iterate(types):
         output_arguments: model.OutputArguments
@@ -15,7 +15,7 @@ def normalize_whitespace_in_arguments_list(code: model.Element):
                 output_arguments.arguments_list.children[i] = token
 
 
-def normalize_whitespace_in_parenthesized(code: model.Element):
+def normalize_whitespace_in_parenthesized(code: model.Composite):
     types = [model.Parenthesized]
     for element in code.iterate(types):
         element: model.Parenthesized
@@ -23,7 +23,7 @@ def normalize_whitespace_in_parenthesized(code: model.Element):
             element.children[index] = ""
 
 
-def normalize_whitespace_in_assignment(code: model.Element):
+def normalize_whitespace_in_assignment(code: model.Composite):
     types = [model.OutputArguments]
     for element in code.iterate(types):
         element: model.OutputArguments
@@ -31,7 +31,7 @@ def normalize_whitespace_in_assignment(code: model.Element):
             element.children[index] = " "
 
 
-def remove_semicolon_after_end(code: model.Element):
+def remove_semicolon_after_end(code: model.Composite):
     types = [model.Block]
     for element in code.iterate(types):
         element: model.Block
