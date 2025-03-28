@@ -114,6 +114,21 @@ def or_none(expr: ParserElement):
     return Opt(expr, default=None)
 
 
+class Leaf(ParserElement):
+
+    def __init__(self, literal: str):
+        super().__init__()
+        self.parser = Literal(literal)
+
+    def parseImpl(self, instring, loc, doActions=True):
+        loc, tokens = self.parser._parse(instring, loc, doActions)
+        assert len(tokens) == 1
+        return loc, model.Leaf(tokens[0])
+
+    def _generateDefaultName(self) -> str:
+        return "Leaf"
+
+
 class DelimitedList(ParserElement):
     """
     Parser for delimited list.
@@ -150,23 +165,39 @@ class DelimitedList(ParserElement):
 
 
 class Block(ParserElement):
-    def __init__(self, name: str, content: ParserElement, optional_end: bool = False):
+    def __init__(
+            self,
+            name: str,
+            content: ParserElement,
+            head: ParserElement | None = None,
+            end: bool | str = True
+    ):
+        # Make sure content and head are parsed as a single token.
+
         super().__init__()
 
-        end = ws + Literal("end") + Opt(ows + Literal(";"), default=None).add_parse_action(lambda toks: ["", ""] if toks[0] is None else toks)
-        if optional_end:
-            end |= nothing(2)
+        head = head if head else nothing()
+
+        end_element = ws + Leaf("end") + Opt(ows + Literal(";"), default=None).add_parse_action(
+            lambda toks: ["", ""] if toks[0] is None else toks
+        )
+        if isinstance(end, str):
+            assert end == "optional"
+            end_element |= nothing(2)
+        elif not end:
+            end_element = nothing(2)
 
         self.parser = (
             Literal(name)
             + ws
+            + head
+            + ows
             + content
-            + end
+            + end_element
         )
 
     def parseImpl(self, instring, loc, doActions=True):
-        loc, tokens = self.parser._parse(instring, loc, doActions)
-        return loc, model.Block(tokens)
+        return self.parser._parse(instring, loc, doActions)
 
     def _generateDefaultName(self) -> str:
         return "Block"
@@ -306,31 +337,32 @@ operation << DelimitedList(
 expression << parenthesized(operation | operand, optional=True)
 expression.set_name("Expression")
 
-keyword = Or(Literal(kw) for kw in ["return", "break", "continue"])
+keyword = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 
 """An assignment or an expression with either no result or an unused result."""
 
-no_output_statement = (
+statement_core = (
     (expression | keyword)
     + or_none(ows + FollowedBy(Literal(";")))
     + or_none(Literal(";"))
 )
 
-output_statement = output_arguments + no_output_statement
+no_output_statement = nothing(1) + statement_core
+output_statement = output_arguments + statement_core
 statement = output_statement | no_output_statement
 
 code = Forward()
 
 elseif_block_part = (
-    Literal("elseif")
-    + ws
-    + no_output_statement
-    + ws
-    + code
+        Leaf("elseif")
+        + ws
+        + no_output_statement
+        + ws
+        + code
 )
 
 else_block_part = (
-    Literal("else")
+    Leaf("else")
     + ws
     + code
 )
@@ -338,38 +370,32 @@ else_block_part = (
 """If block including possible "elseif" and "else" subblocks."""
 if_block = Block(
     name="if",
+    head=no_output_statement,
     content=(
-        no_output_statement
-        + ws
-        + code
+        code
         + ZeroOrMore(ws + elseif_block_part)
         + Opt(ws + else_block_part)
-    )
+    ),
+    end=True
 )
 
 for_loop = Block(
     name="for",
-    content=(
-        statement
-        + ws
-        + code
-    )
+    head=output_statement,
+    content=code,
+    end=True,
 )
 
 function = Block(
     name="function",
-    content=(
-        or_none(output_arguments)
-        + call
-        + ws
-        + code
-    ),
-    optional_end=True
+    head=statement,
+    content=code,
+    end="optional"
 )
 
 catch = (
     Literal("catch")
-    + Opt(White(" \t") + no_output_statement, default=None).add_parse_action(lambda toks: ["", ""] if toks[0] is None else toks)
+    + Opt(White(" \t") + statement_core, default=None).add_parse_action(lambda toks: ["", ""] if toks[0] is None else toks)
     + ws
     + code
 )
@@ -387,20 +413,27 @@ code << ows_delimited_list(
     allow_empty=True
 )
 
+file = ows + code + ows
+
 # Add parse actions to grammar objects which turn the tokens into the respective dataclass.
 parse_actions = {
     arguments_list: model.ArgumentsList,
     function: model.Function,
+    if_block: model.If,
+    try_catch: model.TryCatch,
+    for_loop: model.ForLoop,
     call: model.Call,
     output_arguments: model.OutputArguments,
     comment: model.Comment,
     operation: model.Operation,
-    statement: model.Statement,
+    no_output_statement: model.Statement,
+    output_statement: model.Statement,
     code: model.Code,
     anonymous_function: model.AnonymousFunction,
     array: model.Array,
     single_element_operation: model.SingleElementOperation,
     parenthesized_operation: model.ParenthesizedOperation,
+    file: model.File
 }
 
 for parser_element, target_class in parse_actions.items():

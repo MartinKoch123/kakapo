@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Sequence, Any
+# from abc import ABC, abstractmethod
 
 
 class Component:
@@ -8,52 +9,6 @@ class Component:
         self.parent = None
         self._predecessor = None
         self._successor = None
-
-
-class Leaf(Component):
-
-    def __init__(self, value: str):
-        super().__init__()
-        self.value = value
-
-    def __iter__(self):
-        return iter(())
-
-    def __str__(self) -> str:
-        return str(self.value)
-
-    def __getitem__(self, item: int):
-        if item != 0:
-            raise IndexError("Leaf has only one component.")
-        return self.value
-
-    def __len__(self) -> int:
-        return 1
-
-    def __repr__(self):
-        name = self.__class__.__name__
-        return f"{name}({self.value})"
-
-    def __eq__(self, other) -> bool:
-        return self.value == other.value
-
-    def iterate(self, types: Sequence):
-        return iter(())
-
-    def iterate_with_indent(self, level: int = 0) -> tuple[Component, int]:
-        return iter(())
-
-    @classmethod
-    def from_tokens(cls, tokens: Sequence):
-        assert len(tokens) == 1
-        return cls(tokens[0])
-
-
-class Composite(Component):
-
-    def __init__(self, children: Sequence[Component]):
-        super().__init__()
-        self.children = children
 
     @property
     def predecessor(self) -> Any:
@@ -71,14 +26,62 @@ class Composite(Component):
         for i, child in enumerate(self.parent):
             if child is not self:
                 continue
-            self.parent.children[i-1] = value
-            if i > 1 and isinstance(self.parent.children[i-2], Composite):
+            self.parent.children[i - 1] = value
+            if i > 1 and isinstance(self.parent.children[i - 2], Composite):
                 self.parent.children[i - 2].successor = value
             break
         else:
             raise ValueError("bug")
 
         self._predecessor = value
+
+    def __iter__(self):
+        return iter(())
+
+    def iterate(self, types: Sequence):
+        return iter(())
+
+    def iterate_with_indent(self, level: int = 0) -> tuple[Component, int]:
+        return iter(())
+
+    def __len__(self) -> int:
+        return 1
+
+
+class Leaf(Component):
+
+    def __init__(self, value: str):
+        super().__init__()
+        self.value = value
+
+
+    def __str__(self) -> str:
+        return str(self.value)
+
+    def __getitem__(self, item: int):
+        if item != 0:
+            raise IndexError("Leaf has only one component.")
+        return self.value
+
+    def __repr__(self):
+        name = self.__class__.__name__
+        return f"{name}({self.value})"
+
+    def __eq__(self, other) -> bool:
+        return self.value == other.value
+
+
+    @classmethod
+    def from_tokens(cls, tokens: Sequence):
+        assert len(tokens) == 1
+        return cls(tokens[0])
+
+
+class Composite(Component):
+
+    def __init__(self, children: list[Component]):
+        super().__init__()
+        self.children = children
 
     def __iter__(self):
         return iter(self.children)
@@ -88,6 +91,9 @@ class Composite(Component):
 
     def __getitem__(self, item: int):
         return self.children[item]
+
+    def __setitem__(self, item: int, value):
+        self.children[item] = value
 
     def __len__(self):
         return len(self.children)
@@ -103,6 +109,12 @@ class Composite(Component):
             and len(self) == len(other)
             and all(own_child == other_child for own_child, other_child in zip(self, other))
         )
+
+    def index_of(self, child: Component):
+        for i, other in enumerate(self):
+            if child is other:
+                return i
+        raise ValueError("Child not found.")
 
     def iterate(self, types: Sequence) -> Component:
         for child in self:
@@ -156,30 +168,41 @@ class Construct:
     """A code element which can stand on its own: Statements, Blocks and Comments."""
 
 
-class ArgumentsList(Composite):
+class ElementsList(Composite):
+
+    @property
+    def elements_list(self) -> DelimitedList:
+        raise NotImplementedError()
+
+    @property
+    def elements(self) -> Sequence:
+        raise NotImplementedError
+
+
+class ArgumentsList(ElementsList):
 
     _PARENTHESIZED = 0
 
     @property
-    def arguments_list(self) -> DelimitedList:
+    def elements_list(self) -> DelimitedList:
         return self.children[self._PARENTHESIZED].content
 
     @property
-    def arguments(self):
-        return self.arguments_list.elements
+    def elements(self):
+        return self.elements_list.elements
 
 
-class OutputArguments(Composite):
+class OutputArguments(ElementsList):
 
     _PARENTHESIZED = 0
 
     @property
-    def arguments_list(self) -> DelimitedList:
+    def elements_list(self) -> DelimitedList:
         return self.children[self._PARENTHESIZED].content
 
     @property
-    def arguments(self):
-        return self.arguments_list.elements
+    def elements(self):
+        return self.elements_list.elements
 
 
 class Call(Composite):
@@ -199,15 +222,7 @@ class Call(Composite):
         return delimited_list.elements
 
 
-class Function(Composite):
 
-    _OUTPUT_ARGUMENTS = 2
-    _ARGUMENTS_LIST = 3
-    _CODE = 5
-
-    @property
-    def code(self):
-        return self[self._CODE]
 
 
 class Comment(Composite, Construct):
@@ -257,6 +272,25 @@ class Statement(Composite, Construct):
     def body(self):
         return self[self._BODY]
 
+# class Statement(Composite, Construct):
+#
+#     @property
+#     def body(self) -> StatementBody:
+#         raise NotImplementedError()
+#
+#     @property
+#     def output_arguments(self) -> OutputArguments | None:
+#         return self.children
+#
+#
+#
+# class StatementBody(Statement):
+#
+#     @property
+#     def body(self) -> StatementBody:
+#         return self
+#
+
 
 class Code(Composite):
     pass
@@ -279,23 +313,57 @@ class DelimitedList(Composite):
 class Block(Composite, Construct):
 
     @property
-    def name(self) -> str:
-        return self.children[0]
+    def head(self) -> Component:
+        return self.children[2]
 
     @property
-    def content(self) -> list:
-        return self.children[2:-2]
+    def body(self) -> Component:
+        return self.children[4]
 
-    def iterate_with_indent(self, level: int = 0) -> tuple[Composite, int]:
+    def iterate_with_indent(self, level: int = 0) -> tuple[Component, int]:
         for i, child in enumerate(self):
-            if i == 2:
+            if i == 4:
                 level += 1
-            if i == len(self) - 2:
+            if i == 5:
                 level += -1
             yield child, level
             if isinstance(child, Composite):
                 for grand_child, grand_child_level in child.iterate_with_indent(level):
                     yield grand_child, grand_child_level
+
+
+class Function(Block):
+    pass
+
+
+class If(Block):
+
+    def iterate_with_indent(self, level: int = 0) -> tuple[Component, int]:
+        for i, child in enumerate(self):
+            if i == 4:
+                level += 1
+            if isinstance(child, Leaf) and child.value.startswith("else"):
+                level -= 1
+            if i == len(self) - 3:
+                level += -1
+            yield child, level
+            if isinstance(child, Composite):
+                for grand_child, grand_child_level in child.iterate_with_indent(level):
+                    yield grand_child, grand_child_level
+            if isinstance(child, Leaf) and child.value.startswith("else"):
+                level += 1
+
+
+class ForLoop(Block):
+    pass
+
+
+class TryCatch(Block):
+    pass
+
+
+class File(Composite):
+    pass
 
 
 class AnonymousFunction(Composite):
@@ -312,13 +380,17 @@ class AnonymousFunction(Composite):
         return self.children[3]
 
 
-class Array(Composite):
+class Array(ElementsList):
+
+    _PARENTHESIZED = 0
+
+    @property
+    def elements_list(self) -> DelimitedList:
+        return self.children[self._PARENTHESIZED].content
+
     @property
     def elements(self) -> list:
-        if self.children[2] is None:
-            return []
-        delimited_list: DelimitedList = self.children[2]
-        return delimited_list.elements
+        return self.elements_list.elements if self.elements_list is not None else None
 
 
 class SingleElementOperation(Composite):
