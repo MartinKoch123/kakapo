@@ -18,7 +18,7 @@ from pyparsing import (
     common,
     Forward,
     Empty,
-    QuotedString,
+    QuotedString, PrecededBy, Char, line_end,
 )
 
 import model
@@ -209,6 +209,7 @@ def space_delimited_list(expr: ParserElement, allow_empty: bool = False) -> Pars
 
 def ows_delimited_list(expr: ParserElement, allow_empty: bool = False) -> ParserElement:
     result = ZeroOrMore(expr + ows + FollowedBy(expr)) + expr
+    # result = ZeroOrMore(expr + construct_delimiter + FollowedBy(expr)) + expr
     if allow_empty:
         result = result | empty
     return result
@@ -250,6 +251,15 @@ identifier = (
 
 """A comment. Starts at the comment marker '%' end ends at the next line break."""
 comment = Literal("%") + rest_of_line
+
+
+construct_delimiter = (
+  (PrecededBy(";") + Word(" \t\n"))
+  | Opt(Word(" \t"), default="") + Char("\n") + Opt(Word(" \t\n"), default="")
+  | Opt(Word(" \t"), default="") + FollowedBy(comment)
+  | line_end
+)
+
 
 """A quoted string with single or double quotes."""
 string = (

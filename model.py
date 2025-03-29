@@ -422,6 +422,9 @@ class Array(ElementsList):
 class SingleElementOperation(Composite):
     pass
 
+class Command(Construct):
+    pass
+
 
 def none_or_whitespace(x) -> bool:
     return x is None or isinstance(x, str) and (x.isspace() or x == "")
