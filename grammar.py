@@ -1,8 +1,8 @@
 from typing import Sequence
+from pathlib import Path
 
 from pyparsing import (
     Literal,
-    Suppress,
     White,
     Opt,
     ParserElement,
@@ -10,18 +10,15 @@ from pyparsing import (
     Word,
     alphas,
     alphanums,
-    Group,
     rest_of_line,
     ZeroOrMore,
     OneOrMore,
-    Regex,
     empty,
     FollowedBy,
     common,
     Forward,
     Empty,
     QuotedString,
-    Keyword,
 )
 
 import model
@@ -414,6 +411,7 @@ code << ows_delimited_list(
 )
 
 file = ows + code + ows
+file.enablePackrat()
 
 # Add parse actions to grammar objects which turn the tokens into the respective dataclass.
 parse_actions = {
@@ -438,3 +436,13 @@ parse_actions = {
 
 for parser_element, target_class in parse_actions.items():
     parser_element.add_parse_action(target_class.from_tokens)
+
+
+def parse_string(s: str) -> model.File:
+    parse_result = file.parse_string(s, parse_all=True)
+    return parse_result[0]
+
+
+def parse_file(file_path: Path | str) -> model.File:
+    parse_result = file.parse_file(str(file_path), parse_all=True)
+    return parse_result[0]

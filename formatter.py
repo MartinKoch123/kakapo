@@ -176,3 +176,18 @@ def break_arguments(element: model.Component, max_line_length: int = 120):
 
         args_list[0][3] = " ...\n" + outer_indent
 
+
+def format_file(file: model.File):
+    normalize_whitespace_in_arguments_list(file)
+    normalize_whitespace_in_parenthesized(file)
+    normalize_whitespace_in_assignment(file)
+    remove_semicolon_after_end_keyword(file)
+    remove_semicolon_after_if_condition(file)
+    remove_white_space_before_semicolon(file)
+    remove_semicolon_after_keyword(file)
+    normalize_indentation(file)
+    ensure_function_end(file)
+    normalize_leading_whitespace(file)
+    normalize_trailing_whitespace(file)
+    ensure_empty_line_before_comment(file)
+    break_arguments(file)
