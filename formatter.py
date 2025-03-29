@@ -146,7 +146,37 @@ def ensure_empty_line_before_comment(element: model.Component):
             # TODO: fix relationships
 
 
+def break_arguments(element: model.Component, max_line_length: int = 120):
+    for element, level in element.iterate_with_indent():
 
+        if not isinstance(element, model.Statement):
+            continue
 
+        line_length = len(str(element))
+        if line_length <= max_line_length:
+            continue
 
+        try:
+            core = element.body.content
+        except AttributeError:
+            continue
+        if not isinstance(core, model.Call):
+            continue
+
+        outer_indent = level * 4 * " "
+        inner_indent = outer_indent + (4 * " ")
+
+        args_list = core.arguments_list
+        if args_list is None:
+            continue
+
+        args_list[0][1] = " ...\n" + inner_indent
+
+        for i, token in enumerate(args_list.elements_list):
+            if i % 2 == 0:
+                continue
+
+            args_list.elements_list[i] = ", ...\n" + inner_indent
+
+        args_list[0][3] = " ...\n" + outer_indent
 

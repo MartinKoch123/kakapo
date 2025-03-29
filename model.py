@@ -1,9 +1,9 @@
 from __future__ import annotations
 from typing import Sequence, Any
-# from abc import ABC, abstractmethod
 
 
 class Component:
+    """Base class for all code elements."""
 
     def __init__(self):
         self.parent = None
@@ -42,18 +42,18 @@ class Component:
         return iter(())
 
     def iterate_with_indent(self, level: int = 0) -> tuple[Component, int]:
-        return iter(())
+        raise NotImplementedError()
 
     def __len__(self) -> int:
         return 1
 
 
 class Leaf(Component):
+    """Component with no children."""
 
     def __init__(self, value: str):
         super().__init__()
         self.value = value
-
 
     def __str__(self) -> str:
         return str(self.value)
@@ -70,7 +70,6 @@ class Leaf(Component):
     def __eq__(self, other) -> bool:
         return self.value == other.value
 
-
     @classmethod
     def from_tokens(cls, tokens: Sequence):
         assert len(tokens) == 1
@@ -78,6 +77,7 @@ class Leaf(Component):
 
 
 class Composite(Component):
+    """Code element which has other Components as children."""
 
     def __init__(self, children: list[Component]):
         super().__init__()
@@ -222,9 +222,6 @@ class Call(Composite):
         return delimited_list.elements
 
 
-
-
-
 class Comment(Composite, Construct):
 
     _PERCENTAGE_SIGN = 0
@@ -272,25 +269,6 @@ class Statement(Composite, Construct):
     def body(self):
         return self[self._BODY]
 
-# class Statement(Composite, Construct):
-#
-#     @property
-#     def body(self) -> StatementBody:
-#         raise NotImplementedError()
-#
-#     @property
-#     def output_arguments(self) -> OutputArguments | None:
-#         return self.children
-#
-#
-#
-# class StatementBody(Statement):
-#
-#     @property
-#     def body(self) -> StatementBody:
-#         return self
-#
-
 
 class Code(Composite):
     pass
@@ -300,7 +278,7 @@ class DelimitedList(Composite):
 
     @property
     def elements(self) -> list:
-        return self.children[::4]
+        return self.children[::2]
 
     @classmethod
     def build(cls, elements: Sequence[Composite | str], delimiter: str = ",", left_white: str = "", right_white: str = " "):
