@@ -246,8 +246,11 @@ class Comment(Composite, Construct):
         return self[self._STRING]
 
 
-class Operation(Composite):
-    pass
+class Operation(ElementsList):
+
+    @property
+    def elements_list(self) -> DelimitedList:
+        return self[0]
 
 
 class ParenthesizedOperation(Composite):
@@ -264,7 +267,7 @@ class Parenthesized(Composite):
 
     @property
     def content(self) -> Any:
-        return self.children[2]
+        return self[2]
 
 
 class Statement(Composite, Construct):

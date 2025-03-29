@@ -15,6 +15,8 @@ def normalize_whitespace_in_arguments_list(code: model.Component):
             token: str = token
             token = token.strip(" \n\t.")  # Remove whitespace and "..." line break ellipsis surrounding delimiter.
             token += " "  # Add single space after delimiter.
+            if isinstance(element, model.Operation):
+                token = " " + token
             element.elements_list.children[i] = token
 
 
@@ -74,14 +76,20 @@ def normalize_indentation(element: model.Component):
                 and (not isinstance(element, model.Leaf) or element.value not in ["end", "elseif", "else"])
         ):
             continue
+        parent = element.parent
 
         element_is_block_head = (
-                element.parent
-                and isinstance(element.parent, model.Block)
-                and type(element.parent.head) == type(element)
-                and element.parent.head == element
+                parent
+                and isinstance(parent, model.Block)
+                and type(parent.head) == type(element)
+                and parent.head == element
         )
         if element_is_block_head:
+            continue
+
+        # Workaround for for elseif. #TODO refactor model.If
+        own_index = parent.index_of_child(element)
+        if own_index > 1 and isinstance(parent[own_index - 2], model.Leaf) and parent[own_index - 2].value == "elseif":
             continue
 
         indent = level * INDENT
