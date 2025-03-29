@@ -54,6 +54,9 @@ class Component:
     def __len__(self) -> int:
         return 1
 
+    def __str__(self) -> str:
+        """Convert the code model to a code string."""
+
 
 class Leaf(Component):
     """Component with no children."""
@@ -84,7 +87,9 @@ class Leaf(Component):
 
 
 class Composite(Component):
-    """Code element which has other Components as children."""
+    """
+    Code element which has other Components as children.
+    """
 
     def __init__(self, children: list[Component]):
         super().__init__()
@@ -96,8 +101,9 @@ class Composite(Component):
     def __iter__(self):
         return iter(self.children)
 
-    def __str__(self):
-        return "".join(str(tok) for tok in self if tok is not None)
+    def __str__(self) -> str:
+        strings = (str(child) for child in self if child is not None)
+        return "".join(strings)
 
     def __getitem__(self, item: int):
         return self.children[item]
@@ -105,10 +111,10 @@ class Composite(Component):
     def __setitem__(self, item: int, value):
         self.children[item] = value
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.children)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         name = self.__class__.__name__
         return f"{name}({self.children})"
 
@@ -117,7 +123,9 @@ class Composite(Component):
         return (
             type(self) == type(other)
             and len(self) == len(other)
-            and all(own_child == other_child for own_child, other_child in zip(self, other))
+            and all(
+                own_child == other_child for own_child, other_child in zip(self, other)
+            )
         )
 
     def index_of_child(self, child: Component):
@@ -141,7 +149,9 @@ class Composite(Component):
                 for grand_child, grand_child_level in child.iterate_with_indent(level):
                     yield grand_child, grand_child_level
 
-    def pretty_string(self, indent_level: int = 0, compact: bool = False, nested: bool = True) -> str:
+    def pretty_string(
+        self, indent_level: int = 0, compact: bool = False, nested: bool = True
+    ) -> str:
         indent = indent_level * 4 * " "
         type_ = self.__class__.__name__
 
@@ -164,7 +174,7 @@ class Composite(Component):
                     continue
                 body_part = f"{indent}    {child!r},"
             body_parts.append(body_part)
-        body = '\n'.join(body_parts)
+        body = "\n".join(body_parts)
         return f"{indent}{head}\n{body}\n{indent}{tail}"
 
     def to_list(self) -> list:
@@ -226,14 +236,13 @@ class Call(Composite):
 
     @property
     def arguments_list(self) -> ArgumentsList | None:
-        return self.children[self._ARGUMENTS_LIST]
+        return self[self._ARGUMENTS_LIST]
 
     @property
     def arguments(self) -> Sequence:
         if self.arguments_list is None:
             return tuple()
-        delimited_list: DelimitedList = self.children[1]
-        return delimited_list.elements
+        return self.arguments_list.elements
 
 
 class Comment(Composite, Construct):
@@ -298,7 +307,13 @@ class DelimitedList(Composite):
         return self.children[::2]
 
     @classmethod
-    def build(cls, elements: Sequence[Composite | str], delimiter: str = ",", left_white: str = "", right_white: str = " "):
+    def build(
+        cls,
+        elements: Sequence[Composite | str],
+        delimiter: str = ",",
+        left_white: str = "",
+        right_white: str = " ",
+    ):
         tokens = [elements[0]]
         for element in elements[1:]:
             tokens += [left_white + delimiter + right_white, element]
@@ -353,7 +368,23 @@ class ForLoop(Block):
     pass
 
 
+class WhileLoop(Block):
+    pass
+
+
 class TryCatch(Block):
+    pass
+
+
+class Switch(Block):
+    pass
+
+
+class Case(Block):
+    pass
+
+
+class Otherwise(Block):
     pass
 
 

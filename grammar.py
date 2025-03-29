@@ -383,6 +383,12 @@ for_loop = Block(
     end=True,
 )
 
+while_loop = Block(
+    name="while",
+    head=no_output_statement,
+    content=code
+)
+
 function = Block(
     name="function",
     head=statement,
@@ -405,8 +411,27 @@ try_catch = Block(
     )
 )
 
+switch_case = Block(
+    name="case",
+    head=no_output_statement,
+    content=code,
+    end=False
+)
+
+switch_otherwise = Block(
+    name="otherwise",
+    content=code,
+    end=False
+)
+
+switch = Block(
+    name="switch",
+    head=no_output_statement,
+    content=ows_delimited_list(switch_case | switch_otherwise, allow_empty=True),
+)
+
 code << ows_delimited_list(
-    statement | comment | if_block | for_loop | function | try_catch,
+    statement | comment | if_block | for_loop | while_loop | function | try_catch | switch,
     allow_empty=True
 )
 
@@ -420,6 +445,7 @@ parse_actions = {
     if_block: model.If,
     try_catch: model.TryCatch,
     for_loop: model.ForLoop,
+    while_loop: model.WhileLoop,
     call: model.Call,
     output_arguments: model.OutputArguments,
     comment: model.Comment,
@@ -431,7 +457,10 @@ parse_actions = {
     array: model.Array,
     single_element_operation: model.SingleElementOperation,
     parenthesized_operation: model.ParenthesizedOperation,
-    file: model.File
+    file: model.File,
+    switch: model.Switch,
+    switch_case: model.Case,
+    switch_otherwise: model.Case,
 }
 
 for parser_element, target_class in parse_actions.items():
