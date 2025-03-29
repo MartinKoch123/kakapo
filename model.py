@@ -6,34 +6,41 @@ class Component:
     """Base class for all code elements."""
 
     def __init__(self):
+
+        # Parent is set in parent constructor.
         self.parent = None
-        self._predecessor = None
-        self._successor = None
+
+    @property
+    def successor(self) -> Any:
+        if self.parent is None:
+            raise ValueError("Component has no parent.")
+        own_index = self.parent.index_of_child(self)
+        successor_index = own_index + 1
+        if successor_index >= len(self.parent):
+            return None
+        return self.parent[successor_index]
+
+    @property
+    def predecessor_index(self) -> int | None:
+        if self.parent is None:
+            raise ValueError("Component has no parent.")
+        own_index = self.parent.index_of_child(self)
+        if own_index > 0:
+            return own_index - 1
 
     @property
     def predecessor(self) -> Any:
-        return self._predecessor
+        if index := self.predecessor_index:
+            return self.parent[index]
 
     @predecessor.setter
     def predecessor(self, value):
         if not isinstance(value, str):
             raise NotImplementedError("Only string is supported.")
-        if self._predecessor is None:
-            raise ValueError("No predecessor.")
-        if self.parent is None:
-            raise ValueError("No parent.")
-
-        for i, child in enumerate(self.parent):
-            if child is not self:
-                continue
-            self.parent.children[i - 1] = value
-            if i > 1 and isinstance(self.parent.children[i - 2], Composite):
-                self.parent.children[i - 2].successor = value
-            break
-        else:
-            raise ValueError("bug")
-
-        self._predecessor = value
+        index = self.predecessor_index
+        if index is None:
+            raise ValueError("Component is first child of parent.")
+        self.parent[index] = value
 
     def __iter__(self):
         return iter(())
@@ -82,6 +89,9 @@ class Composite(Component):
     def __init__(self, children: list[Component]):
         super().__init__()
         self.children = children
+        for child in self:
+            if isinstance(child, Component):
+                child.parent = self
 
     def __iter__(self):
         return iter(self.children)
@@ -110,7 +120,7 @@ class Composite(Component):
             and all(own_child == other_child for own_child, other_child in zip(self, other))
         )
 
-    def index_of(self, child: Component):
+    def index_of_child(self, child: Component):
         for i, other in enumerate(self):
             if child is other:
                 return i
@@ -131,7 +141,7 @@ class Composite(Component):
                 for grand_child, grand_child_level in child.iterate_with_indent(level):
                     yield grand_child, grand_child_level
 
-    def pretty_string(self, indent_level: int = 0, compact: bool = False) -> str:
+    def pretty_string(self, indent_level: int = 0, compact: bool = False, nested: bool = True) -> str:
         indent = indent_level * 4 * " "
         type_ = self.__class__.__name__
 
@@ -145,11 +155,15 @@ class Composite(Component):
         body_parts = []
         for child in self:
             if isinstance(child, Composite):
-                body_parts += [child.pretty_string(indent_level + 1, compact)]
+                if nested:
+                    body_part = child.pretty_string(indent_level + 1, compact)
+                else:
+                    body_part = f"{indent}    {child.__class__.__name__}(...)"
             else:
                 if compact and none_or_whitespace(child):
                     continue
-                body_parts += [f"{indent}    {child!r},"]
+                body_part = f"{indent}    {child!r},"
+            body_parts.append(body_part)
         body = '\n'.join(body_parts)
         return f"{indent}{head}\n{body}\n{indent}{tail}"
 

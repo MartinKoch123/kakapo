@@ -1,6 +1,9 @@
 import model
 
 
+INDENT = 4 * " "
+
+
 def normalize_whitespace_in_arguments_list(code: model.Component):
     for element in code.iterate(types=[model.ElementsList]):
         element: model.ElementsList
@@ -53,7 +56,6 @@ def remove_semicolon_after_keyword(code: model.Component):
         if isinstance(core, model.Leaf) and core.value in ["return", "break", "continue"]:
             element.children[-2] = ""
             element.children[-1] = ""
-            core._successor = element.children[-2]
 
 
 def remove_white_space_before_semicolon(code: model.Component):
@@ -61,19 +63,6 @@ def remove_white_space_before_semicolon(code: model.Component):
         if element.children[-2] == "":
             continue
         element.children[-2] = ""
-        element.children[-3]._successor = element.children[-2]
-
-
-def set_context(element: model.Component):
-    for i, child in enumerate(element):
-        if not isinstance(child, model.Component):
-            continue
-
-        child._predecessor = element.children[i-1] if i > 0 else None
-        child._successor = element.children[i+1] if i < len(element) - 1 else None
-        child.parent = element
-
-        set_context(child)
 
 
 def normalize_indentation(element: model.Component):
@@ -95,7 +84,7 @@ def normalize_indentation(element: model.Component):
         if element_is_block_head:
             continue
 
-        indent = level * 4 * " "
+        indent = level * INDENT
 
         if element.predecessor is not None:
             assert type(element.predecessor) == str
@@ -136,14 +125,13 @@ def ensure_empty_line_before_comment(element: model.Component):
         assert type(element.predecessor) == str
 
         parent = element.parent
-        i_element = parent.index_of(element)
+        i_element = parent.index_of_child(element)
 
         if isinstance(parent[i_element-2], model.Comment):
             continue
 
         if element.predecessor.count("\n") < 2:
             parent[i_element-1] = "\n" + element.predecessor
-            # TODO: fix relationships
 
 
 def break_arguments(element: model.Component, max_line_length: int = 120):
@@ -163,8 +151,8 @@ def break_arguments(element: model.Component, max_line_length: int = 120):
         if not isinstance(core, model.Call):
             continue
 
-        outer_indent = level * 4 * " "
-        inner_indent = outer_indent + (4 * " ")
+        outer_indent = level * INDENT
+        inner_indent = (level + 1) * INDENT
 
         args_list = core.arguments_list
         if args_list is None:
