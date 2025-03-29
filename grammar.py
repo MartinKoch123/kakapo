@@ -90,6 +90,8 @@ operator = Or(
         ".*",
         "/",
         "./",
+        "^",
+        ".^",
         "\\",
         "==",
         "~=",
@@ -319,30 +321,20 @@ anonymous_function = (
     + expression
 )
 
+
 operand_atom = Forward()
-operand = Forward()
 operation = Forward()
-
-parenthesized_operation = parenthesized(operation).set_name("ParenthesizedOperation")
-
-operand_atom << (call | common.number | string | array | anonymous_function | parenthesized(operand_atom) | parenthesized_operation)
+operand = Forward()
+operand_atom << (call | common.number | string | array | anonymous_function | parenthesized(operand) | parenthesized(operation))
 
 left_operation = (Literal("-") | Literal("~")) + operand_atom
 right_operation = operand_atom + (Literal("'") | Literal(".'"))
 
 single_element_operation = left_operation | right_operation
 
-operand << (single_element_operation | operand_atom)
-operand.set_name("Operand")
-
-operation << DelimitedList(
-    parenthesized(operand, optional=True),
-    delimiter=operator,
-    min_elements=2
-).set_name("Operation")
-
-expression << parenthesized(operation | operand, optional=True)
-expression.set_name("Expression")
+operand << (single_element_operation | operand_atom | parenthesized(operand) | parenthesized(operation))
+operation << DelimitedList(operand, delimiter=operator, min_elements=2)
+expression << (operation | operand)
 
 keyword = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 
@@ -350,8 +342,8 @@ keyword = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 
 statement_core = (
     (expression | keyword)
-    + or_none(ows + FollowedBy(Literal(";")))
-    + or_none(Literal(";"))
+    + Opt(ows + FollowedBy(Literal(";")), default="")
+    + Opt(Literal(";"), default="")
 )
 
 no_output_statement = nothing(1) + statement_core
@@ -361,11 +353,11 @@ statement = output_statement | no_output_statement
 code = Forward()
 
 elseif_block_part = (
-        Leaf("elseif")
-        + ws
-        + no_output_statement
-        + ws
-        + code
+    Leaf("elseif")
+    + ws
+    + no_output_statement
+    + ws
+    + code
 )
 
 else_block_part = (
@@ -466,7 +458,7 @@ parse_actions = {
     anonymous_function: model.AnonymousFunction,
     array: model.Array,
     single_element_operation: model.SingleElementOperation,
-    parenthesized_operation: model.ParenthesizedOperation,
+    # parenthesized_operation: model.ParenthesizedOperation,
     file: model.File,
     switch: model.Switch,
     switch_case: model.Case,

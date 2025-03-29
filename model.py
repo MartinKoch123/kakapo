@@ -262,8 +262,8 @@ class Operation(ElementsList):
         return self[0]
 
 
-class ParenthesizedOperation(Composite):
-    pass
+# class ParenthesizedOperation(Composite):
+#     pass
 
 
 class Parenthesized(Composite):
@@ -412,7 +412,7 @@ class Array(ElementsList):
 
     @property
     def elements_list(self) -> DelimitedList:
-        return self.children[self._PARENTHESIZED].content
+        return self[self._PARENTHESIZED].content
 
     @property
     def elements(self) -> list:
