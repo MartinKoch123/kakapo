@@ -126,6 +126,13 @@ def normalize_leading_whitespace(file: model.File):
     file[0] = ""
 
 
+def ensure_comment_leading_space(element: model.Component):
+    for comment in element.iterate(types=[model.Comment]):
+        content = comment[1]
+        if content and content[0] != " ":
+            comment[1] = " " + content
+
+
 def ensure_empty_line_before_comment(element: model.Component):
     """Ensures an empty line before each block of comments."""
     for element in element.iterate(types=[model.Comment]):
@@ -188,4 +195,5 @@ def format_file(file: model.File):
     normalize_leading_whitespace(file)
     normalize_trailing_whitespace(file)
     ensure_empty_line_before_comment(file)
+    ensure_comment_leading_space(file)
     break_arguments(file)
