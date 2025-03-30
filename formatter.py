@@ -148,21 +148,18 @@ def break_arguments(element: model.Component, max_line_length: int = 120):
         if not isinstance(element, model.Statement):
             continue
 
-        line_length = len(str(element))
-        if line_length <= max_line_length:
-            continue
-
-        try:
-            core = element.body.content
-        except AttributeError:
-            continue
-        if not isinstance(core, model.Call):
-            continue
-
         outer_indent = level * INDENT
         inner_indent = (level + 1) * INDENT
 
-        args_list = core.arguments_list
+        line_length = len(str(element) + inner_indent)
+        if line_length <= max_line_length:
+            continue
+
+        body = element.body
+        if not isinstance(body, model.Call):
+            continue
+
+        args_list = body.arguments_list
         if args_list is None:
             continue
 

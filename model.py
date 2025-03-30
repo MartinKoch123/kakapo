@@ -422,7 +422,8 @@ class Array(ElementsList):
 class SingleElementOperation(Composite):
     pass
 
-class Command(Construct):
+
+class Command(Construct, Composite):
     pass
 
 

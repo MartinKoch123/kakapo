@@ -73,10 +73,15 @@ def nothing(n: int = 1):
     return Empty().set_parse_action(lambda s, loc, toks: ["" for i in range(n)])
 
 
+def join_tokens(tokens: Sequence) -> list:
+    """Parse action which converts a list of string tokens into a single-element list containing the combined string."""
+    return ["".join(tokens)]
+
+
 """White space"""
 ws = White(" \t\n")
 ws = OneOrMore(ws | Literal("...")).parse_with_tabs()
-ws.add_parse_action(lambda s, loc, toks: ["".join(toks)])
+ws.add_parse_action(join_tokens)
 # ws = Word(" \t\n.").parse_with_tabs()
 
 """Optional white space"""
@@ -210,8 +215,7 @@ def space_delimited_list(expr: ParserElement, allow_empty: bool = False) -> Pars
 
 
 def ows_delimited_list(expr: ParserElement, allow_empty: bool = False) -> ParserElement:
-    result = ZeroOrMore(expr + ows + FollowedBy(expr)) + expr
-    # result = ZeroOrMore(expr + construct_delimiter + FollowedBy(expr)) + expr
+    result = ZeroOrMore(expr + construct_delimiter + FollowedBy(expr)) + expr
     if allow_empty:
         result = result | empty
     return result
@@ -260,7 +264,7 @@ construct_delimiter = (
   | Opt(Word(" \t"), default="") + Char("\n") + Opt(Word(" \t\n"), default="")
   | Opt(Word(" \t"), default="") + FollowedBy(comment)
   | line_end
-)
+).add_parse_action(join_tokens)
 
 
 """A quoted string with single or double quotes."""
@@ -432,8 +436,10 @@ switch = Block(
     content=ows_delimited_list(switch_case | switch_otherwise, allow_empty=True),
 )
 
+command = space_delimited_list(identifier) + FollowedBy(construct_delimiter)
+
 code << ows_delimited_list(
-    statement | comment | if_block | for_loop | while_loop | function | try_catch | switch,
+    command | statement | comment | if_block | for_loop | while_loop | function | try_catch | switch,
     allow_empty=True
 )
 
@@ -458,11 +464,11 @@ parse_actions = {
     anonymous_function: model.AnonymousFunction,
     array: model.Array,
     single_element_operation: model.SingleElementOperation,
-    # parenthesized_operation: model.ParenthesizedOperation,
     file: model.File,
     switch: model.Switch,
     switch_case: model.Case,
     switch_otherwise: model.Case,
+    command: model.Command,
 }
 
 for parser_element, target_class in parse_actions.items():
