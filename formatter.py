@@ -13,7 +13,8 @@ def normalize_whitespace_in_arguments_list(code: model.Component):
             if i % 2 == 0:
                 continue
             token: str = token
-            token = token.strip(" \n\t.")  # Remove whitespace and "..." line break ellipsis surrounding delimiter.
+            token = token.strip(" \n\t")  # Remove whitespace surrounding delimiter
+            token = token.replace("...", "") # Remove ellipsis
             token += " "  # Add single space after delimiter.
             if isinstance(element, model.Operation):
                 token = " " + token
@@ -163,7 +164,7 @@ def break_arguments(element: model.Component, max_line_length: int = 120):
         if args_list is None:
             continue
 
-        args_list[0][1] = " ...\n" + inner_indent
+        args_list[1][1] = " ...\n" + inner_indent
 
         for i, token in enumerate(args_list.elements_list):
             if i % 2 == 0:
@@ -171,7 +172,7 @@ def break_arguments(element: model.Component, max_line_length: int = 120):
 
             args_list.elements_list[i] = ", ...\n" + inner_indent
 
-        args_list[0][3] = " ...\n" + outer_indent
+        args_list[1][3] = " ...\n" + outer_indent
 
 
 def format_file(file: model.File):

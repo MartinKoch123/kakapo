@@ -18,7 +18,7 @@ from pyparsing import (
     common,
     Forward,
     Empty,
-    QuotedString, PrecededBy, Char, line_end,
+    QuotedString, PrecededBy, Char, line_end, Regex,
 )
 
 import model
@@ -250,9 +250,15 @@ Examples:
  - a1_2
  - a.b.c
 """
+keyword_pattern = {
+    "Initial": r"[A-Za-z]",
+    "Body": r"[\w.]*",
+    "DontEndWithDot": r"(?<!\.)",
+}
+
 identifier = (
     ~ReservedKeyword()
-    + Word(alphas, alphanums + "_.", max=MAX_IDENTIFIER_LENGTH, min=1)
+    + Regex("".join(keyword_pattern.values()))
 )
 
 """A comment. Starts at the comment marker '%' end ends at the next line break."""
@@ -300,13 +306,16 @@ output_arguments = (
 
 
 argument_brackets = (("(", ")"), ("{", "}"))
-arguments_list = parenthesized(
-    DelimitedList(
-        expression | Literal(":"),
-        min_elements=0
-    ),
-    brackets=argument_brackets
-).set_name("ArgumentsList")
+arguments_list = (
+    Opt(Literal("."), default="")
+    + parenthesized(
+        DelimitedList(
+            expression | Literal(":"),
+            min_elements=0
+        ),
+        brackets=argument_brackets
+    )
+)
 
 """A variable or a function call with or without arguments. Includes nested calls."""
 call << (identifier + or_none(arguments_list[1, ...]))

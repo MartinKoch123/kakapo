@@ -205,7 +205,7 @@ class ElementsList(Composite):
 
 class ArgumentsList(ElementsList):
 
-    _PARENTHESIZED = 0
+    _PARENTHESIZED = 1
 
     @property
     def elements_list(self) -> DelimitedList:
