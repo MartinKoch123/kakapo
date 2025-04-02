@@ -1,3 +1,9 @@
-# matparse
+# Kakapo
 
-Python parser and formatter for MATLAB code.
+A flightless MATLAB formatter
+
+### Build
+
+```
+pyinstaller -F kakapo.py
+```

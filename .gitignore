@@ -3,3 +3,6 @@
 venv/*
 playground/*
 archive/*
+build/*
+dist/*
+kakapo.spec
