@@ -123,9 +123,7 @@ class Composite(Component):
         return (
             type(self) == type(other)
             and len(self) == len(other)
-            and all(
-                own_child == other_child for own_child, other_child in zip(self, other)
-            )
+            and all(own_child == other_child for own_child, other_child in zip(self, other))
         )
 
     def index_of_child(self, child: Component):
@@ -149,9 +147,7 @@ class Composite(Component):
                 for grand_child, grand_child_level in child.iterate_with_indent(level):
                     yield grand_child, grand_child_level
 
-    def pretty_string(
-        self, indent_level: int = 0, compact: bool = False, nested: bool = True
-    ) -> str:
+    def pretty_string(self, indent_level: int = 0, compact: bool = False, nested: bool = True) -> str:
         indent = indent_level * 4 * " "
         type_ = self.__class__.__name__
 
@@ -424,6 +420,14 @@ class SingleElementOperation(Composite):
 
 
 class Command(Construct, Composite):
+    pass
+
+
+class Classdef(Block):
+    pass
+
+
+class Methods(Block):
     pass
 
 

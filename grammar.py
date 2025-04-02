@@ -8,8 +8,6 @@ from pyparsing import (
     ParserElement,
     Or,
     Word,
-    alphas,
-    alphanums,
     rest_of_line,
     ZeroOrMore,
     OneOrMore,
@@ -18,7 +16,11 @@ from pyparsing import (
     common,
     Forward,
     Empty,
-    QuotedString, PrecededBy, Char, line_end, Regex,
+    QuotedString,
+    PrecededBy,
+    Char,
+    line_end,
+    Regex,
 )
 
 import model
@@ -27,10 +29,7 @@ MAX_IDENTIFIER_LENGTH = 63
 
 
 class ReservedKeyword(ParserElement):
-    """
-    A reserved keyword.
-    Examples: "if", "return", "function"
-    """
+    """A reserved keyword."""
 
     KEYWORDS = [
         "arguments",
@@ -46,6 +45,7 @@ class ReservedKeyword(ParserElement):
         "function",
         "global",
         "if",
+        "methods",
         "otherwise",
         "parfor",
         "persistent",
@@ -68,6 +68,7 @@ class ReservedKeyword(ParserElement):
 
 
 ParserElement.setDefaultWhitespaceChars("")
+
 
 def nothing(n: int = 1):
     return Empty().set_parse_action(lambda s, loc, toks: ["" for i in range(n)])
@@ -140,7 +141,13 @@ class DelimitedList(ParserElement):
     Converts tokens into a model.DelimitedList object while parsing.
     """
 
-    def __init__(self, expr: ParserElement, delimiter: str | ParserElement = ",", min_elements: int = 1, optional_delimiter: bool = False):
+    def __init__(
+        self,
+        expr: ParserElement,
+        delimiter: str | ParserElement = ",",
+        min_elements: int = 1,
+        optional_delimiter: bool = False,
+    ):
         super().__init__()
 
         if isinstance(delimiter, str):
@@ -149,14 +156,7 @@ class DelimitedList(ParserElement):
         if optional_delimiter:
             delimiter = delimiter | ws
         delimiter.add_parse_action(lambda s, loc, toks: ["".join(toks)])
-        self.parser = (
-            (
-                expr
-                + delimiter
-                + FollowedBy(expr)
-            )[max(min_elements - 1, 0), ...]
-            + expr
-        )
+        self.parser = (expr + delimiter + FollowedBy(expr))[max(min_elements - 1, 0), ...] + expr
         if min_elements == 0:
             self.parser = self.parser | empty
 
@@ -169,21 +169,17 @@ class DelimitedList(ParserElement):
 
 
 class Block(ParserElement):
-    def __init__(
-            self,
-            name: str,
-            content: ParserElement,
-            head: ParserElement | None = None,
-            end: bool | str = True
-    ):
+    def __init__(self, name: str, content: ParserElement, head: ParserElement | None = None, end: bool | str = True):
         # Make sure content and head are parsed as a single token.
 
         super().__init__()
 
         head = head if head else nothing()
 
-        end_element = ws + Leaf("end") + Opt(ows + Literal(";"), default=None).add_parse_action(
-            lambda toks: ["", ""] if toks[0] is None else toks
+        end_element = (
+            ws
+            + Leaf("end")
+            + Opt(ows + Literal(";"), default=None).add_parse_action(lambda toks: ["", ""] if toks[0] is None else toks)
         )
         if isinstance(end, str):
             assert end == "optional"
@@ -191,14 +187,7 @@ class Block(ParserElement):
         elif not end:
             end_element = nothing(2)
 
-        self.parser = (
-            Literal(name)
-            + ws
-            + head
-            + ows
-            + content
-            + end_element
-        )
+        self.parser = Literal(name) + ws + head + ows + content + end_element
 
     def parseImpl(self, instring, loc, doActions=True):
         return self.parser._parse(instring, loc, doActions)
@@ -228,13 +217,7 @@ def parenthesized(
 ):
     # Turning this into a class was a lot slower for some reason
     with_parenthesis = Or(
-        (
-            opening_bracket
-            + ows
-            + content
-            + ows
-            + closing_bracket
-        ) for opening_bracket, closing_bracket in brackets
+        (opening_bracket + ows + content + ows + closing_bracket) for opening_bracket, closing_bracket in brackets
     )
     if not optional:
         parser = with_parenthesis
@@ -256,27 +239,23 @@ keyword_pattern = {
     "DontEndWithDot": r"(?<!\.)",
 }
 
-identifier = (
-    ~ReservedKeyword()
-    + Regex("".join(keyword_pattern.values()))
-)
+identifier = ~ReservedKeyword() + Regex("".join(keyword_pattern.values()))
 
 """A comment. Starts at the comment marker '%' end ends at the next line break."""
 comment = Literal("%") + rest_of_line
 
 
 construct_delimiter = (
-  (PrecededBy(";") + Word(" \t\n"))
-  | Opt(Word(" \t"), default="") + Char("\n") + Opt(Word(" \t\n"), default="")
-  | Opt(Word(" \t"), default="") + FollowedBy(comment)
-  | line_end
+    (PrecededBy(";") + Word(" \t\n"))
+    | Opt(Word(" \t"), default="") + Char("\n") + Opt(Word(" \t\n"), default="")
+    | Opt(Word(" \t"), default="") + FollowedBy(comment)
+    | line_end
 ).add_parse_action(join_tokens)
 
 
 """A quoted string with single or double quotes."""
-string = (
-    QuotedString(quote_char='"', esc_quote='""', unquote_results=False)
-    | QuotedString(quote_char="'", esc_quote="''", unquote_results=False)
+string = QuotedString(quote_char='"', esc_quote='""', unquote_results=False) | QuotedString(
+    quote_char="'", esc_quote="''", unquote_results=False
 )
 
 expression = Forward()
@@ -285,10 +264,7 @@ expression = Forward()
 array_delimiter = Literal(",") | Literal(";")
 array = parenthesized(
     DelimitedList(expression, min_elements=0, delimiter=array_delimiter, optional_delimiter=True),
-    brackets=(
-        ("[", "]"),
-        ("{", "}")
-    )
+    brackets=(("[", "]"), ("{", "}")),
 ).set_name("Array")
 
 call = Forward()
@@ -306,15 +282,8 @@ output_arguments = (
 
 
 argument_brackets = (("(", ")"), ("{", "}"))
-arguments_list = (
-    Opt(Literal("."), default="")
-    + parenthesized(
-        DelimitedList(
-            expression | Literal(":"),
-            min_elements=0
-        ),
-        brackets=argument_brackets
-    )
+arguments_list = Opt(Literal("."), default="") + parenthesized(
+    DelimitedList(expression | Literal(":"), min_elements=0), brackets=argument_brackets
 )
 
 """A variable or a function call with or without arguments. Includes nested calls."""
@@ -326,19 +295,15 @@ Examples:
  - @(x) x + 1
  - @mean
 """
-anonymous_function = (
-    Literal("@")
-    + ows
-    + or_none(arguments_list)
-    + ows
-    + expression
-)
+anonymous_function = Literal("@") + ows + or_none(arguments_list) + ows + expression
 
 
 operand_atom = Forward()
 operation = Forward()
 operand = Forward()
-operand_atom << (call | common.number | string | array | anonymous_function | parenthesized(operand) | parenthesized(operation))
+operand_atom << (
+    call | common.number | string | array | anonymous_function | parenthesized(operand) | parenthesized(operation)
+)
 
 left_operation = (Literal("-") | Literal("~")) + operand_atom
 right_operation = operand_atom + (Literal("'") | Literal(".'"))
@@ -354,9 +319,7 @@ keyword = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 """An assignment or an expression with either no result or an unused result."""
 
 statement_core = (
-    (expression | keyword)
-    + Opt(ows + FollowedBy(Literal(";")), default="")
-    + Opt(Literal(";"), default="")
+    (expression | keyword) + Opt(ows + FollowedBy(Literal(";")), default="") + Opt(Literal(";"), default="")
 )
 
 no_output_statement = nothing(1) + statement_core
@@ -365,30 +328,16 @@ statement = output_statement | no_output_statement
 
 code = Forward()
 
-elseif_block_part = (
-    Leaf("elseif")
-    + ws
-    + no_output_statement
-    + ws
-    + code
-)
+elseif_block_part = Leaf("elseif") + ws + no_output_statement + ws + code
 
-else_block_part = (
-    Leaf("else")
-    + ws
-    + code
-)
+else_block_part = Leaf("else") + ws + code
 
 """If block including possible "elseif" and "else" subblocks."""
 if_block = Block(
     name="if",
     head=no_output_statement,
-    content=(
-        code
-        + ZeroOrMore(ws + elseif_block_part)
-        + Opt(ws + else_block_part)
-    ),
-    end=True
+    content=(code + ZeroOrMore(ws + elseif_block_part) + Opt(ws + else_block_part)),
+    end=True,
 )
 
 for_loop = Block(
@@ -398,46 +347,24 @@ for_loop = Block(
     end=True,
 )
 
-while_loop = Block(
-    name="while",
-    head=no_output_statement,
-    content=code
-)
+while_loop = Block(name="while", head=no_output_statement, content=code)
 
-function = Block(
-    name="function",
-    head=statement,
-    content=code,
-    end="optional"
-)
+function = Block(name="function", head=statement, content=code, end="optional")
 
 catch = (
     Literal("catch")
-    + Opt(White(" \t") + statement_core, default=None).add_parse_action(lambda toks: ["", ""] if toks[0] is None else toks)
+    + Opt(White(" \t") + statement_core, default=None).add_parse_action(
+        lambda toks: ["", ""] if toks[0] is None else toks
+    )
     + ws
     + code
 )
 
-try_catch = Block(
-    name="try",
-    content=(
-        code
-        + or_none(ws + catch)
-    )
-)
+try_catch = Block(name="try", content=(code + or_none(ws + catch)))
 
-switch_case = Block(
-    name="case",
-    head=no_output_statement,
-    content=code,
-    end=False
-)
+switch_case = Block(name="case", head=no_output_statement, content=code, end=False)
 
-switch_otherwise = Block(
-    name="otherwise",
-    content=code,
-    end=False
-)
+switch_otherwise = Block(name="otherwise", content=code, end=False)
 
 switch = Block(
     name="switch",
@@ -445,12 +372,22 @@ switch = Block(
     content=ows_delimited_list(switch_case | switch_otherwise, allow_empty=True),
 )
 
+classdef = Block(
+    name="classdef",
+    head=identifier,
+    content=code,
+)
+
+methods = Block(
+    name="methods",
+    content=code,
+)
+
 command = space_delimited_list(identifier) + FollowedBy(construct_delimiter)
 
-code << ows_delimited_list(
-    command | statement | comment | if_block | for_loop | while_loop | function | try_catch | switch,
-    allow_empty=True
-)
+any_block = if_block | for_loop | while_loop | function | try_catch | switch | classdef | methods
+
+code << ows_delimited_list(command | statement | comment | any_block, allow_empty=True)
 
 file = ows + code + ows
 file.enablePackrat()
@@ -478,6 +415,8 @@ parse_actions = {
     switch_case: model.Case,
     switch_otherwise: model.Case,
     command: model.Command,
+    classdef: model.Classdef,
+    methods: model.Methods,
 }
 
 for parser_element, target_class in parse_actions.items():

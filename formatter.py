@@ -14,7 +14,7 @@ def normalize_whitespace_in_arguments_list(code: model.Component):
                 continue
             token: str = token
             token = token.strip(" \n\t")  # Remove whitespace surrounding delimiter
-            token = token.replace("...", "") # Remove ellipsis
+            token = token.replace("...", "")  # Remove ellipsis
             token += " "  # Add single space after delimiter.
             if isinstance(element, model.Operation):
                 token = " " + token
@@ -39,7 +39,7 @@ def normalize_whitespace_in_assignment(code: model.Component):
 
 
 def remove_semicolon_after_end_keyword(code: model.Component):
-    """Remove optional semicolon after the an 'end' keyword."""
+    """Remove optional semicolon after the 'end' keyword."""
     types = [model.Block]
     for element in code.iterate(types):
         element: model.Block
@@ -143,11 +143,11 @@ def ensure_empty_line_before_comment(element: model.Component):
         parent = element.parent
         i_element = parent.index_of_child(element)
 
-        if isinstance(parent[i_element-2], model.Comment):
+        if isinstance(parent[i_element - 2], model.Comment):
             continue
 
         if element.predecessor.count("\n") < 2:
-            parent[i_element-1] = "\n" + element.predecessor
+            parent[i_element - 1] = "\n" + element.predecessor
 
 
 def break_arguments(element: model.Component, max_line_length: int = 120):
