@@ -91,7 +91,7 @@ class Composite(Component):
     Code element which has other Components as children.
     """
 
-    def __init__(self, children: list[Component]):
+    def __init__(self, children: Sequence[Component | str]):
         super().__init__()
         self.children = children
         for child in self:
@@ -243,12 +243,13 @@ class Call(Composite):
 
 class Comment(Composite, Construct):
 
-    _PERCENTAGE_SIGN = 0
-    _STRING = 1
+    @property
+    def marker(self):
+        return self[0]
 
     @property
     def string(self):
-        return self[self._STRING]
+        return self[1]
 
 
 class Operation(ElementsList):
@@ -256,10 +257,6 @@ class Operation(ElementsList):
     @property
     def elements_list(self) -> DelimitedList:
         return self[0]
-
-
-# class ParenthesizedOperation(Composite):
-#     pass
 
 
 class Parenthesized(Composite):

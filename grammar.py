@@ -2,69 +2,78 @@ from typing import Sequence
 from pathlib import Path
 
 from pyparsing import (
-    Literal,
-    White,
-    Opt,
-    ParserElement,
-    Or,
-    Word,
-    rest_of_line,
-    ZeroOrMore,
-    OneOrMore,
-    empty,
-    FollowedBy,
-    common,
-    Forward,
-    Empty,
-    QuotedString,
-    PrecededBy,
     Char,
+    Combine,
+    common,
+    empty,
+    Empty,
     line_end,
+    Literal,
+    Opt,
+    Or,
+    FollowedBy,
+    Forward,
+    ParserElement,
+    PrecededBy,
+    QuotedString,
     Regex,
+    rest_of_line,
+    White,
+    Word,
+    ZeroOrMore,
 )
 
 import model
 
-MAX_IDENTIFIER_LENGTH = 63
 
+OPERATORS = [
+    "+",
+    "-",
+    "*",
+    ".*",
+    "/",
+    "./",
+    "^",
+    ".^",
+    "\\",
+    "==",
+    "~=",
+    ">",
+    ">=",
+    "<",
+    "<=",
+    "&",
+    "&&",
+    "|",
+    "||",
+    ":",
+]
 
-class ReservedKeyword(ParserElement):
-    """A reserved keyword."""
-
-    KEYWORDS = [
-        "arguments",
-        "break",
-        "case",
-        "catch",
-        "classdef",
-        "continue",
-        "else",
-        "elseif",
-        "end",
-        "for",
-        "function",
-        "global",
-        "if",
-        "methods",
-        "otherwise",
-        "parfor",
-        "persistent",
-        "return",
-        "spmd",
-        "switch",
-        "try",
-        "while",
-    ]
-
-    def __init__(self):
-        super().__init__()
-        self.parser = Or(Literal(s) for s in ReservedKeyword.KEYWORDS)
-
-    def parseImpl(self, instring, loc, doActions=True):
-        return self.parser._parse(instring, loc, doActions)
-
-    def _generateDefaultName(self) -> str:
-        return "ReservedKeyword"
+KEYWORDS = [
+    "arguments",
+    "break",
+    "case",
+    "catch",
+    "classdef",
+    "continue",
+    "else",
+    "elseif",
+    "end",
+    "for",
+    "function",
+    "global",
+    "if",
+    "methods",
+    "otherwise",
+    "parfor",
+    "persistent",
+    "properties",
+    "return",
+    "spmd",
+    "switch",
+    "try",
+    "while",
+]
 
 
 ParserElement.setDefaultWhitespaceChars("")
@@ -74,49 +83,32 @@ def nothing(n: int = 1):
     return Empty().set_parse_action(lambda s, loc, toks: ["" for i in range(n)])
 
 
-def join_tokens(tokens: Sequence) -> list:
-    """Parse action which converts a list of string tokens into a single-element list containing the combined string."""
-    return ["".join(tokens)]
-
-
-"""White space"""
-ws = White(" \t\n")
-ws = OneOrMore(ws | Literal("...")).parse_with_tabs()
-ws.add_parse_action(join_tokens)
-# ws = Word(" \t\n.").parse_with_tabs()
-
-"""Optional white space"""
-ows = Opt(ws, default="")
-
-operator = Or(
-    [
-        "+",
-        "-",
-        "*",
-        ".*",
-        "/",
-        "./",
-        "^",
-        ".^",
-        "\\",
-        "==",
-        "~=",
-        ">",
-        ">=",
-        "<",
-        "<=",
-        "&",
-        "&&",
-        "|",
-        "||",
-        ":",
-    ]
-)
-
-
 def or_none(expr: ParserElement):
     """Parse expr or return None if not found."""
     return Opt(expr, default=None)
+
+
+class ReservedKeyword(ParserElement):
+    """A reserved keyword."""
+
+    def __init__(self):
+        super().__init__()
+        self.parser = Or(Literal(s) for s in KEYWORDS)
+
+    def parseImpl(self, instring, loc, doActions=True):
+        return self.parser._parse(instring, loc, doActions)
+
+    def _generateDefaultName(self) -> str:
+        return "ReservedKeyword"
+
+
+"""White space including ellipsis."""
+ws = Combine((White(" \t\n") | Literal("..."))[1, ...]).parse_with_tabs()
+
+"""Optional white space"""
+ows = Opt(ws, default="").parse_with_tabs()
+
+operator = Or(OPERATORS)
 
 
 class Leaf(ParserElement):
@@ -156,7 +148,9 @@ class DelimitedList(ParserElement):
         if optional_delimiter:
             delimiter = delimiter | ws
         delimiter.add_parse_action(lambda s, loc, toks: ["".join(toks)])
-        self.parser = (expr + delimiter + FollowedBy(expr))[max(min_elements - 1, 0), ...] + expr
+        self.parser = (expr + delimiter + FollowedBy(expr))[
+            max(min_elements - 1, 0), ...
+        ] + expr
         if min_elements == 0:
             self.parser = self.parser | empty
 
@@ -169,7 +163,13 @@ class DelimitedList(ParserElement):
 
 
 class Block(ParserElement):
-    def __init__(self, name: str, content: ParserElement, head: ParserElement | None = None, end: bool | str = True):
+    def __init__(
+        self,
+        name: str,
+        content: ParserElement,
+        head: ParserElement | None = None,
+        end: bool | str = True,
+    ):
         # Make sure content and head are parsed as a single token.
 
         super().__init__()
@@ -179,7 +179,9 @@ class Block(ParserElement):
         end_element = (
             ws
             + Leaf("end")
-            + Opt(ows + Literal(";"), default=None).add_parse_action(lambda toks: ["", ""] if toks[0] is None else toks)
+            + Opt(ows + Literal(";"), default=None).add_parse_action(
+                lambda toks: ["", ""] if toks[0] is None else toks
+            )
         )
         if isinstance(end, str):
             assert end == "optional"
@@ -196,7 +198,9 @@ class Block(ParserElement):
         return "Block"
 
 
-def space_delimited_list(expr: ParserElement, allow_empty: bool = False) -> ParserElement:
+def space_delimited_list(
+    expr: ParserElement, allow_empty: bool = False
+) -> ParserElement:
     result = ZeroOrMore(expr + ws + FollowedBy(expr)) + expr
     if allow_empty:
         result = result | empty
@@ -217,20 +221,23 @@ def parenthesized(
 ):
     # Turning this into a class was a lot slower for some reason
     with_parenthesis = Or(
-        (opening_bracket + ows + content + ows + closing_bracket) for opening_bracket, closing_bracket in brackets
+        (opening_bracket + ows + content + ows + closing_bracket)
+        for opening_bracket, closing_bracket in brackets
     )
     if not optional:
         parser = with_parenthesis
     else:
         without_parenthesis = nothing(2) + content + nothing(2)
         parser = with_parenthesis | without_parenthesis
-    return parser.add_parse_action(model.Parenthesized.from_tokens).set_name("Parenthesized")
+    return parser.add_parse_action(model.Parenthesized.from_tokens).set_name(
+        "Parenthesized"
+    )
 
 
 """
 A string identifying a variable, function or class. Includes namespace syntax.
 Examples:
- - a1_2
+ - test123
  - a.b.c
 """
 keyword_pattern = {
@@ -245,25 +252,27 @@ identifier = ~ReservedKeyword() + Regex("".join(keyword_pattern.values()))
 comment = Literal("%") + rest_of_line
 
 
-construct_delimiter = (
+construct_delimiter = Combine(
     (PrecededBy(";") + Word(" \t\n"))
     | Opt(Word(" \t"), default="") + Char("\n") + Opt(Word(" \t\n"), default="")
     | Opt(Word(" \t"), default="") + FollowedBy(comment)
     | line_end
-).add_parse_action(join_tokens)
+)
 
 
 """A quoted string with single or double quotes."""
-string = QuotedString(quote_char='"', esc_quote='""', unquote_results=False) | QuotedString(
-    quote_char="'", esc_quote="''", unquote_results=False
-)
+string = QuotedString(
+    quote_char='"', esc_quote='""', unquote_results=False
+) | QuotedString(quote_char="'", esc_quote="''", unquote_results=False)
 
 expression = Forward()
 
 """Array"""
 array_delimiter = Literal(",") | Literal(";")
 array = parenthesized(
-    DelimitedList(expression, min_elements=0, delimiter=array_delimiter, optional_delimiter=True),
+    DelimitedList(
+        expression, min_elements=0, delimiter=array_delimiter, optional_delimiter=True
+    ),
     brackets=(("[", "]"), ("{", "}")),
 ).set_name("Array")
 
@@ -302,7 +311,13 @@ operand_atom = Forward()
 operation = Forward()
 operand = Forward()
 operand_atom << (
-    call | common.number | string | array | anonymous_function | parenthesized(operand) | parenthesized(operation)
+    call
+    | common.number
+    | string
+    | array
+    | anonymous_function
+    | parenthesized(operand)
+    | parenthesized(operation)
 )
 
 left_operation = (Literal("-") | Literal("~")) + operand_atom
@@ -310,7 +325,12 @@ right_operation = operand_atom + (Literal("'") | Literal(".'"))
 
 single_element_operation = left_operation | right_operation
 
-operand << (single_element_operation | operand_atom | parenthesized(operand) | parenthesized(operation))
+operand << (
+    single_element_operation
+    | operand_atom
+    | parenthesized(operand)
+    | parenthesized(operation)
+)
 operation << DelimitedList(operand, delimiter=operator, min_elements=2)
 expression << (operation | operand)
 
@@ -319,7 +339,9 @@ keyword = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 """An assignment or an expression with either no result or an unused result."""
 
 statement_core = (
-    (expression | keyword) + Opt(ows + FollowedBy(Literal(";")), default="") + Opt(Literal(";"), default="")
+    (expression | keyword)
+    + Opt(ows + FollowedBy(Literal(";")), default="")
+    + Opt(Literal(";"), default="")
 )
 
 no_output_statement = nothing(1) + statement_core
@@ -340,6 +362,7 @@ if_block = Block(
     end=True,
 )
 
+"""For-loop code block."""
 for_loop = Block(
     name="for",
     head=output_statement,
@@ -347,8 +370,10 @@ for_loop = Block(
     end=True,
 )
 
+"""While-loop code block."""
 while_loop = Block(name="while", head=no_output_statement, content=code)
 
+"""Function definition block."""
 function = Block(name="function", head=statement, content=code, end="optional")
 
 catch = (
@@ -383,9 +408,19 @@ methods = Block(
     content=code,
 )
 
-command = space_delimited_list(identifier) + FollowedBy(construct_delimiter)
+command_identifier = Combine(identifier + Opt(".*"))
+command = space_delimited_list(command_identifier) + FollowedBy(construct_delimiter)
 
-any_block = if_block | for_loop | while_loop | function | try_catch | switch | classdef | methods
+any_block = (
+    if_block
+    | for_loop
+    | while_loop
+    | function
+    | try_catch
+    | switch
+    | classdef
+    | methods
+)
 
 code << ows_delimited_list(command | statement | comment | any_block, allow_empty=True)
 
@@ -424,10 +459,12 @@ for parser_element, target_class in parse_actions.items():
 
 
 def parse_string(s: str) -> model.File:
+    """Parse a MATLAB code string and return its representation model."""
     parse_result = file.parse_string(s, parse_all=True)
     return parse_result[0]
 
 
 def parse_file(file_path: Path | str) -> model.File:
+    """Parse a MATLAB .m file and return its representation model."""
     parse_result = file.parse_file(str(file_path), parse_all=True)
     return parse_result[0]
