@@ -82,7 +82,7 @@ def normalize_indentation(element: model.Component):
         element_is_block_head = (
                 parent
                 and isinstance(parent, model.Block)
-                and type(parent.head) == type(element)
+                and type(parent.head) is type(element)
                 and parent.head == element
         )
         if element_is_block_head:
@@ -96,7 +96,7 @@ def normalize_indentation(element: model.Component):
         indent = level * INDENT
 
         if element.predecessor is not None:
-            assert type(element.predecessor) == str
+            assert type(element.predecessor) is str
             new: str = element.predecessor.rstrip(" ")
             if not new.endswith("\n"):
                 new += "\n"
@@ -104,7 +104,7 @@ def normalize_indentation(element: model.Component):
             element.predecessor = new + indent
 
         elif parent is not None and parent.predecessor is not None:
-            assert type(parent.predecessor) == str
+            assert type(parent.predecessor) is str
             new: str = parent.predecessor.rstrip(" ")
             if not new.endswith("\n"):
                 new += "\n"
@@ -141,7 +141,7 @@ def ensure_empty_line_before_comment(element: model.Component):
     for element in element.iterate(types=[model.Comment]):
         if element.predecessor is None:
             continue
-        assert type(element.predecessor) == str
+        assert type(element.predecessor) is str
 
         parent = element.parent
         i_element = parent.index_of_child(element)

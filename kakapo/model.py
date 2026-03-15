@@ -123,7 +123,7 @@ class Composite(Component):
     def __eq__(self, other):
         """Elements are equal if they have equal type and their children are equal."""
         return (
-            type(self) == type(other)
+            type(self) is type(other)
             and len(self) == len(other)
             and all(own_child == other_child for own_child, other_child in zip(self, other))
         )
@@ -154,7 +154,7 @@ class Composite(Component):
         type_ = self.__class__.__name__
 
         head = f"{type_}(["
-        tail = f"])"
+        tail = "])"
 
         if all(not isinstance(child, Composite) for child in self):
             body = ", ".join(repr(child) for child in self)
@@ -437,9 +437,6 @@ class Command(Construct, Composite):
 class Classdef(Block):
     pass
 
-
-class Methods(Block):
-    pass
 
 
 def none_or_whitespace(x) -> bool:
