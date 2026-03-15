@@ -89,7 +89,7 @@ KEYWORDS = [
 ]
 
 # Turn-off the default behaviour of ignoring whitespace. Whitespace parsing will be handled manually.
-ParserElement.setDefaultWhitespaceChars("")
+ParserElement.set_default_whitespace_chars("")
 
 
 def nothing(n: int = 1):
@@ -474,7 +474,7 @@ code << ows_delimited_list(command | statement | comment | any_block, allow_empt
 file = ows + code + ows
 
 # Packrat gives a massive performance increase.
-file.enablePackrat()
+file.enable_packrat()
 
 # Add parse actions to grammar objects which turn the tokens into the respective dataclass.
 parse_actions = {
