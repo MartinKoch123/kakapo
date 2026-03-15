@@ -3,8 +3,7 @@ from pathlib import Path
 
 import pyparsing
 
-import formatter
-import grammar
+from kakapo import grammar, formatter
 
 
 def format_file(file_path: Path):
