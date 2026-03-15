@@ -1,8 +1,9 @@
 from __future__ import annotations
+from abc import ABC, abstractmethod
 from typing import Sequence, Any
 
 
-class Component:
+class Component(ABC):
     """Base class for all code elements."""
 
     def __init__(self):
@@ -54,6 +55,7 @@ class Component:
     def __len__(self) -> int:
         return 1
 
+    @abstractmethod
     def __str__(self) -> str:
         """Convert the code model to a code string."""
 
