@@ -1,6 +1,7 @@
 from __future__ import annotations
+from dataclasses import dataclass, fields
 from abc import ABC, abstractmethod
-from typing import Sequence, Any
+from typing import Sequence, Any, Type
 
 
 class Component(ABC):
@@ -46,7 +47,7 @@ class Component(ABC):
     def __iter__(self):
         return iter(())
 
-    def iterate(self, types: Sequence):
+    def iterate(self, types: Sequence | None = None):
         return iter(())
 
     def iterate_with_indent(self, level: int = 0) -> tuple[Component, int]:
@@ -104,7 +105,7 @@ class Composite(Component):
         return iter(self.children)
 
     def __str__(self) -> str:
-        strings = (str(child) for child in self if child is not None)
+        strings = [str(child) for child in self if child is not None]
         return "".join(strings)
 
     def __getitem__(self, item: int):
@@ -125,7 +126,9 @@ class Composite(Component):
         return (
             type(self) is type(other)
             and len(self) == len(other)
-            and all(own_child == other_child for own_child, other_child in zip(self, other))
+            and all(
+                own_child == other_child for own_child, other_child in zip(self, other)
+            )
         )
 
     def index_of_child(self, child: Component):
@@ -134,11 +137,11 @@ class Composite(Component):
                 return i
         raise ValueError("Child not found.")
 
-    def iterate(self, types: Sequence) -> Component:
+    def iterate(self, types: Sequence[Type] | None = None) -> Component:
         for child in self:
-            if any(isinstance(child, type_) for type_ in types):
+            if types is None or any(isinstance(child, type_) for type_ in types):
                 yield child
-            if isinstance(child, Composite):
+            if any(isinstance(child, type_) for type_ in [Composite, Composite2]):
                 for grand_child in child.iterate(types):
                     yield grand_child
 
@@ -149,7 +152,9 @@ class Composite(Component):
                 for grand_child, grand_child_level in child.iterate_with_indent(level):
                     yield grand_child, grand_child_level
 
-    def pretty_string(self, indent_level: int = 0, compact: bool = False, nested: bool = True) -> str:
+    def pretty_string(
+        self, indent_level: int = 0, compact: bool = False, nested: bool = True
+    ) -> str:
         indent = indent_level * 4 * " "
         type_ = self.__class__.__name__
 
@@ -186,6 +191,28 @@ class Composite(Component):
         return cls(list(tokens))
 
 
+@dataclass
+class Composite2:
+
+    def __iter__(self):
+        return (getattr(self, f.name) for f in fields(self))
+
+    def __str__(self) -> str:
+        return "".join(map(str, self))
+    
+    def iterate(self, types: Sequence[Type] | None = None) -> Component:
+        for child in self:
+            if types is None or any(isinstance(child, type_) for type_ in types):
+                yield child
+            if any(isinstance(child, type_) for type_ in [Composite, Composite2]):
+                for grand_child in child.iterate(types):
+                    yield grand_child
+
+    @classmethod
+    def from_tokens(cls, tokens: Sequence):
+        return cls(*tokens)
+
+
 class Construct:
     """A code element which can stand on its own: Statements, Blocks and Comments."""
 
@@ -214,17 +241,12 @@ class ArgumentsList(ElementsList):
         return self.elements_list.elements
 
 
-class OutputArguments(ElementsList):
-
-    _PARENTHESIZED = 0
-
-    @property
-    def elements_list(self) -> DelimitedList:
-        return self.children[self._PARENTHESIZED].content
-
-    @property
-    def elements(self):
-        return self.elements_list.elements
+@dataclass
+class OutputArguments(Composite2):
+    elements_list: DelimitedList
+    whitespace_before_equal_sign: str
+    equal_sign: str
+    whitespace_after_equal_sign: str
 
 
 class Call(Composite):
@@ -261,34 +283,38 @@ class Operation(ElementsList):
         return self[0]
 
 
-class Parenthesized(Composite):
-
-    # 0: Bracket
-    # 1: Whitespace
-    # 2: Content
-    # 3: Whitespace
-    # 4: Bracket
-
-    @property
-    def content(self) -> Any:
-        return self[2]
+@dataclass
+class Parenthesized(Composite2):
+    opening_delimiter: str
+    whitespace_before_content: str
+    content: Component | str
+    whitespace_after_content: str
+    closing_delimiter: str
 
 
-class Statement(Composite, Construct):
+@dataclass
+class Statement(Composite2, Construct):
+    output_arguments: OutputArguments | None
+    body: Component
+    whitespace_before_semicolon: str
+    semicolon: str
 
-    _OUTPUT_ARGUMENTS = 0
-    _BODY = 1
 
-    @property
-    def output_arguments(self) -> Sequence:
-        output_args_list = self[self._OUTPUT_ARGUMENTS]
-        if output_args_list is None:
-            return tuple()
-        return output_args_list.elements
+# class Statement(Composite, Construct):
 
-    @property
-    def body(self):
-        return self[self._BODY]
+#     _OUTPUT_ARGUMENTS = 0
+#     _BODY = 1
+
+#     @property
+#     def output_arguments(self) -> Sequence:
+#         output_args_list = self[self._OUTPUT_ARGUMENTS]
+#         if output_args_list is None:
+#             return tuple()
+#         return output_args_list.elements
+
+#     @property
+#     def body(self):
+#         return self[self._BODY]
 
 
 class Code(Composite):
@@ -315,26 +341,36 @@ class DelimitedList(Composite):
         return cls(tokens)
 
 
-class Block(Composite, Construct):
+@dataclass
+class Block(Composite2, Construct):
+    name: str
+    element_delimiter: Any
+    head: Any
+    construct_delimiter: Any
+    body: Component
+    whitespace_before_end: str
+    end_keyword: str
+    whitespace_before_semicolon: str
+    semicolon: str
 
-    @property
-    def head(self) -> Component:
-        return self.children[2]
+    # @property
+    # def head(self) -> Component:
+    #     return self.children[2]
 
-    @property
-    def body(self) -> Component:
-        return self.children[4]
+    # @property
+    # def body(self) -> Component:
+    #     return self.children[4]
 
-    def iterate_with_indent(self, level: int = 0) -> tuple[Component, int]:
-        for i, child in enumerate(self):
-            if i == 4:
-                level += 1
-            if i == 5:
-                level += -1
-            yield child, level
-            if isinstance(child, Composite):
-                for grand_child, grand_child_level in child.iterate_with_indent(level):
-                    yield grand_child, grand_child_level
+    # def iterate_with_indent(self, level: int = 0) -> tuple[Component, int]:
+    #     for i, child in enumerate(self):
+    #         if i == 4:
+    #             level += 1
+    #         if i == 5:
+    #             level += -1
+    #         yield child, level
+    #         if isinstance(child, Composite):
+    #             for grand_child, grand_child_level in child.iterate_with_indent(level):
+    #                 yield grand_child, grand_child_level
 
 
 class Function(Block):
@@ -436,7 +472,6 @@ class Command(Construct, Composite):
 
 class Classdef(Block):
     pass
-
 
 
 def none_or_whitespace(x) -> bool:

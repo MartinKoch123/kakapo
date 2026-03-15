@@ -1,5 +1,3 @@
-import unittest
-
 import pyparsing as pp
 import pytest
 
@@ -115,7 +113,7 @@ def test_import(string, expected):
     ],
 )
 def test_comment(string, expected):
-    actual = grammar.parse_string(string)[1][0]
+    actual = grammar.comment.parse_string(string)[0]
     assert actual == expected
 
 

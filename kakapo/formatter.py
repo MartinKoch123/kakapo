@@ -1,3 +1,5 @@
+from unittest import case
+
 from . import model
 
 
@@ -22,29 +24,29 @@ def normalize_whitespace_in_arguments_list(code: model.Component):
 
 
 def normalize_whitespace_in_parenthesized(code: model.Composite):
-    types = [model.Parenthesized]
-    for element in code.iterate(types):
-        element: model.Parenthesized
-        for index in [1, 3]:
-            element.children[index] = ""
+    for element in code.iterate():
+        match element:
+            case model.Parenthesized():
+                element.whitespace_before_content = ""
+                element.whitespace_after_content = ""
 
 
 def normalize_whitespace_in_assignment(code: model.Component):
     """Ensure equality sign of assignment is surrounded by single spaces."""
-    types = [model.OutputArguments]
-    for element in code.iterate(types):
-        element: model.OutputArguments
-        for index in [1, 3]:
-            element.children[index] = " "
+    for element in code.iterate():
+        match element:
+            case model.OutputArguments():
+                element.whitespace_before_equal_sign = " "
+                element.whitespace_after_equal_sign = " "
 
 
-def remove_semicolon_after_end_keyword(code: model.Component):
+def remove_semicolon_and_whitespace_after_end_keyword(code: model.Component):
     """Remove optional semicolon after the 'end' keyword."""
-    types = [model.Block]
-    for element in code.iterate(types):
-        element: model.Block
-        if element.children[-1] == ";":
-            element.children[-1] = ""
+    for element in code.iterate():
+        match element:
+            case model.Block():
+                element.whitespace_before_semicolon = ""
+                element.semicolon = ""
 
 
 def remove_semicolon_after_if_condition(code: model.Component):
@@ -62,11 +64,11 @@ def remove_semicolon_after_keyword(code: model.Component):
 
 
 def remove_white_space_before_semicolon(code: model.Component):
-    for element in code.iterate(types=[model.Statement]):
-        if element.children[-2] == "":
-            continue
-        element.children[-2] = ""
-
+    for element in code.iterate():
+        match element:
+            case model.Statement():
+                element.whitespace_before_semicolon = ""
+        
 
 def normalize_indentation(element: model.Component):
 
@@ -189,7 +191,7 @@ def format_file(file: model.File):
     normalize_whitespace_in_arguments_list(file)
     normalize_whitespace_in_parenthesized(file)
     normalize_whitespace_in_assignment(file)
-    remove_semicolon_after_end_keyword(file)
+    remove_semicolon_and_whitespace_after_end_keyword(file)
     remove_semicolon_after_if_condition(file)
     remove_white_space_before_semicolon(file)
     remove_semicolon_after_keyword(file)
