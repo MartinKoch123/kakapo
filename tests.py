@@ -1,9 +1,9 @@
 import unittest
-import grammar
-import model
-import pyparsing as pp
 
+import pyparsing as pp
 import pytest
+
+from kakapo import grammar, model
 
 
 def assert_parsing_fails(element: pp.ParserElement, string: str):

@@ -1,4 +1,4 @@
-import model
+from . import model
 
 
 INDENT = 4 * " "

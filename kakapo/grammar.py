@@ -36,7 +36,7 @@ from pyparsing import (
     ZeroOrMore,
 )
 
-import model
+from . import model
 
 
 OPERATORS = [
