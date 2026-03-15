@@ -5,5 +5,5 @@ A flightless MATLAB formatter
 ### Build
 
 ```
-pyinstaller -F kakapo.py
+uv run pyinstaller -F kakapo.py
 ```
