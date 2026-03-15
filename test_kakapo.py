@@ -103,7 +103,7 @@ def test_identifier_error(string):
     ],
 )
 def test_import(string, expected):
-    actual = grammar.parse_string(string)[1][0]
+    actual = grammar.parse_string(string)[1][0] # noqa
     assert actual == expected
 
 
@@ -149,104 +149,100 @@ def test_command_error(string):
     assert_parsing_fails(grammar.command, string)
 
 
-class MatparseTest(unittest.TestCase):
+@pytest.mark.parametrize(
+    ["string", "parser", "expected"],
+    (
+        (
+            "a",
+            grammar.DelimitedList(pp.Word(pp.alphas), delimiter=","),
+            model.DelimitedList(["a"]),
+        ),
+        (
+            "a\n, b",
+            grammar.DelimitedList(pp.Word(pp.alphas), delimiter=","),
+            model.DelimitedList(["a", "\n, ", "b"]),
+        ),
+        (
+            "a ;; b   ;;c",
+            grammar.DelimitedList(pp.Word(pp.alphas), delimiter=";;"),
+            model.DelimitedList(["a", " ;; ", "b", "   ;;", "c"]),
+        ),
+    )
+)
+def test_delimited_list(string, parser, expected):
+    actual = parser.parse_string(string, parse_all=True)[0]
+    assert actual == expected
 
-    def test_delimited_list(self):
-        tests = (
-            (
-                "a",
-                grammar.DelimitedList(pp.Word(pp.alphas), delimiter=","),
-                model.DelimitedList(["a"]),
-            ),
-            (
-                "a\n, b",
-                grammar.DelimitedList(pp.Word(pp.alphas), delimiter=","),
-                model.DelimitedList(["a", "\n, ", "b"]),
-            ),
-            (
-                "a ;; b   ;;c",
-                grammar.DelimitedList(pp.Word(pp.alphas), delimiter=";;"),
-                model.DelimitedList(["a", " ;; ", "b", "   ;;", "c"]),
-            ),
-        )
-        for string, parser, expected in tests:
-            actual = parser.parse_string(string, parse_all=True)[0]
-            self.assertEqual(expected, actual)
+@pytest.mark.parametrize(
+    ("input_", "expected"),
+    (
+        ("'test'", "'test'"),
+        ('"test"', '"test"'),
+        ('"a""b"', '"a""b"'),
+        ('"a' 'b"', '"a' 'b"'),
+    )
+)
+def test_string(input_, expected):
+    actual = grammar.string.parse_string(input_)[0]
+    assert actual == expected
 
-    # def test_output_arguments_list(self):
-    #     tests = (
-    #         ("a = ", ("", mpm.DelimitedList.build([Call(['a', None])])), "", " ", "=", " ")),
-    #         ("a\n, b = ", ("", mpm.DelimitedList.build("ab", left_white="\n"), "", " ", "=", " ")),
-    #         ("[a] = ", ("[", "", mpm.DelimitedList.build("a"), "", "]", " ", "=", " ")),
-    #         ("[a,b,c] = ", ("[", "", mpm.DelimitedList.build("abc", right_white=""), "", "]", " ", "=", " ")),
-    #     )
-    #
-    #     for string, expected_tokens in tests:
-    #         actual = mpg.output_arguments.parse_string(string)[0]
-    #         expected = mpm.OutputArgumentList(expected_tokens)
-    #         self.assertEqual(expected, actual)
+@pytest.mark.parametrize(
+    "string",
+    (
+        "func",
+        "func()",
+        "func(  )",
+        "func(1)",
+        "func(1, a)",
+        "func(1,a,  c)",
+    )
+)
+def test_call(string):
+    model = grammar.call.parse_string(string, parse_all=True)[0]
+    expected = str(model)
+    assert expected == string
 
-    def test_string(self):
-        tests = (
-            ("'test'", "'test'"),
-            ('"test"', '"test"'),
-            ('"a""b"', '"a""b"'),
-            ('"a' 'b"', '"a' 'b"'),
-        )
-        for input_, expected in tests:
-            with self.subTest(msg=f"input: {input_}"):
-                actual = grammar.string.parse_string(input_)[0]
-                self.assertEqual(expected, actual)
+@pytest.mark.parametrize(
+    "string",
+    (
+        "a + 1 + 's1' + \"s2\"",
+        "1 - 2 / 3 * 4 == 5 ~= 6 > 7 < 8 >= 9 <= 10 .* 11 ./12 \\ 13",
+        "1+2",
+    )
+)
+def test_operation(string):
+    model = grammar.operation.parse_string(string, parse_all=True)[0]
+    expected = str(model)
+    assert expected == string
 
-    def test_call(self):
-        tests = (
-            "func",
-            "func()",
-            "func(  )",
-            "func(1)",
-            "func(1, a)",
-            "func(1,a,  c)",
-        )
-        parser = grammar.call
-        for string in tests:
-            self.assert_parse_dump(string, parser)
+@pytest.mark.parametrize(
+    "string",
+    (
+        "@(x)x",
+        "@(x) x",
+        "@(x, y) 1 + 2",
+        "@() 1 + 2",
+        "@mean",
+    )
+)
+def test_anonymous_function(string):
+    model = grammar.anonymous_function.parse_string(string, parse_all=True)[0]
+    expected = str(model)
+    assert expected == string
 
-    def test_operation(self):
-        tests = (
-            "a + 1 + 's1' + \"s2\"",
-            "1 - 2 / 3 * 4 == 5 ~= 6 > 7 < 8 >= 9 <= 10 .* 11 ./12 \\ 13",
-            "1+2",
-        )
-        for string in tests:
-            self.assert_parse_dump(string, parser=grammar.operation)
-
-    def test_anonymous_function(self):
-        tests = (
-            "@(x)x",
-            "@(x) x",
-            "@(x, y) 1 + 2",
-            "@() 1 + 2",
-            "@mean",
-        )
-        for string in tests:
-            self.assert_parse_dump(string, parser=grammar.anonymous_function)
-
-    def test_array(self):
-        tests = (
-            "[]",
-            "[1, a, 'hello', true, mean(x + 1)]",
-            "{1, 2, 3}",
-        )
-        for string in tests:
-            self.assert_parse_dump(string, parser=grammar.array)
-
-    def assert_parse_dump(self, string: str, parser: pp.ParserElement):
-        model = parser.parse_string(string, parse_all=True)[0]
-        expected = str(model)
-        self.assertEqual(
-            expected, string, msg=f'Parser: {parser.__class__.name}, Input: "{string}"'
-        )
+@pytest.mark.parametrize(
+    "string",
+    (
+        "[]",
+        "[1, a, 'hello', true, mean(x + 1)]",
+        "{1, 2, 3}",
+    )
+)
+def test_array(string):
+    model = grammar.array.parse_string(string, parse_all=True)[0]
+    expected = str(model)
+    assert expected == string
 
 
 if __name__ == "__main__":
-    unittest.main()
+    pytest.main()
