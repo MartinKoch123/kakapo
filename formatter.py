@@ -103,9 +103,12 @@ def normalize_indentation(element: model.Component):
 
             element.predecessor = new + indent
 
-        elif element.parent is not None and element.parent.predecessor is not None:
-            assert type(element.parent.predecessor) == str
-            element.parent.predecessor = "\n" + indent
+        elif parent is not None and parent.predecessor is not None:
+            assert type(parent.predecessor) == str
+            new: str = parent.predecessor.rstrip(" ")
+            if not new.endswith("\n"):
+                new += "\n"
+            parent.predecessor = new + indent
 
 
 def ensure_function_end(element: model.Component):

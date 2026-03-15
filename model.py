@@ -339,6 +339,18 @@ class Function(Block):
     pass
 
 
+class Class(Block):
+    pass
+
+
+class Properties(Block):
+    pass
+
+
+class Methods(Block):
+    pass
+
+
 class If(Block):
 
     def iterate_with_indent(self, level: int = 0) -> tuple[Component, int]:

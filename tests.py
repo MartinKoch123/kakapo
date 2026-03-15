@@ -36,6 +36,34 @@ def test_optional_white_space_error(string):
     assert_parsing_fails(grammar.ows, string)
 
 
+@pytest.mark.parametrize(
+    "string",
+    [
+        " ",
+        " \t ",
+        " ... ",
+        " ... ...",
+        "...\n",
+        "...\n... \n \t",
+    ]
+)
+def test_element_delimiter(string):
+    assert_parsing_returns_unmodified_string(grammar.element_delimiter, string)
+
+
+@pytest.mark.parametrize(
+    "string",
+    [
+        "",
+        "\n",
+        "\n ...",
+        "...\n\n ",
+    ]
+)
+def test_element_delimiter_error(string):
+    assert_parsing_fails(grammar.element_delimiter, string)
+
+
 @pytest.mark.parametrize("string", grammar.OPERATORS)
 def test_operator(string):
     assert_parsing_returns_unmodified_string(grammar.operator, string)
@@ -89,6 +117,36 @@ def test_import(string, expected):
 def test_comment(string, expected):
     actual = grammar.parse_string(string)[1][0]
     assert actual == expected
+
+
+@pytest.mark.parametrize("string", [",", ";"])
+def test_array_delimiter(string):
+    assert_parsing_returns_unmodified_string(grammar.array_delimiter, string)
+
+
+@pytest.mark.parametrize(
+    "string, expected",
+    [
+        ("clear", model.Command(["clear"])),
+        ("clear a123 b_", model.Command(["clear", " ", "a123", " ", "b_"])),
+        # ("command -flag arg", model.Command(["command", " ", "-flag", " ", "arg"]))
+    ],
+)
+def test_command(string, expected):
+    actual = grammar.parse_string(string)[1][0]
+    assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "string",
+    [
+        "command\narg",
+        "command;arg",
+        "command(arg)",
+    ]
+)
+def test_command_error(string):
+    assert_parsing_fails(grammar.command, string)
 
 
 class MatparseTest(unittest.TestCase):

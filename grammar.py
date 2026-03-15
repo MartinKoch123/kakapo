@@ -1,3 +1,16 @@
+"""
+Parsing logic for MATLAB code.
+
+Terminology:
+ - Block: Code delimited by a block keyword and the 'end' keyword, e.g. function, if, for.
+ - Construct: Unit of code which can stand on its own, e.g. statements, blocks, comments.
+
+Todo:
+ - Support all format of command arguments.
+
+"""
+
+
 from typing import Sequence
 from pathlib import Path
 
@@ -75,7 +88,7 @@ KEYWORDS = [
     "while",
 ]
 
-
+# Turn-off the default behaviour of ignoring whitespace. Whitespace parsing will be handled manually.
 ParserElement.setDefaultWhitespaceChars("")
 
 
@@ -108,10 +121,20 @@ ws = Combine((White(" \t\n") | Literal("..."))[1, ...]).parse_with_tabs()
 """Optional white space"""
 ows = Opt(ws, default="").parse_with_tabs()
 
+element_delimiter = Combine(
+    (
+        White(" \t")
+        | (Literal("...") + Regex(r"[ \t]*\n?[ \t]*"))
+    )[1, ...]
+).parse_with_tabs()
+
+optional_element_delimiter = Opt(element_delimiter, default="").parse_with_tabs()
+
 operator = Or(OPERATORS)
 
 
 class Leaf(ParserElement):
+    """Parser for the model.Leaf object. A leaf consists only af a string and does not contain child elements."""
 
     def __init__(self, literal: str):
         super().__init__()
@@ -163,6 +186,7 @@ class DelimitedList(ParserElement):
 
 
 class Block(ParserElement):
+
     def __init__(
         self,
         name: str,
@@ -189,22 +213,20 @@ class Block(ParserElement):
         elif not end:
             end_element = nothing(2)
 
-        self.parser = Literal(name) + ws + head + ows + content + end_element
+        self.parser = (
+            Literal(name)
+            + optional_element_delimiter
+            + head
+            + construct_delimiter
+            + content
+            + end_element
+        )
 
     def parseImpl(self, instring, loc, doActions=True):
         return self.parser._parse(instring, loc, doActions)
 
     def _generateDefaultName(self) -> str:
         return "Block"
-
-
-def space_delimited_list(
-    expr: ParserElement, allow_empty: bool = False
-) -> ParserElement:
-    result = ZeroOrMore(expr + ws + FollowedBy(expr)) + expr
-    if allow_empty:
-        result = result | empty
-    return result
 
 
 def ows_delimited_list(expr: ParserElement, allow_empty: bool = False) -> ParserElement:
@@ -289,10 +311,15 @@ output_arguments = (
     + ows
 )
 
+output_statement = Forward()
 
 argument_brackets = (("(", ")"), ("{", "}"))
-arguments_list = Opt(Literal("."), default="") + parenthesized(
-    DelimitedList(expression | Literal(":"), min_elements=0), brackets=argument_brackets
+argument = output_statement | expression | Literal(":")
+arguments_list = (
+    Opt(Literal("."), default="")
+    + parenthesized(
+        DelimitedList(argument, min_elements=0), brackets=argument_brackets
+    )
 )
 
 """A variable or a function call with or without arguments. Includes nested calls."""
@@ -345,7 +372,7 @@ statement_core = (
 )
 
 no_output_statement = nothing(1) + statement_core
-output_statement = output_arguments + statement_core
+output_statement << (output_arguments + statement_core)
 statement = output_statement | no_output_statement
 
 code = Forward()
@@ -387,10 +414,13 @@ catch = (
 
 try_catch = Block(name="try", content=(code + or_none(ws + catch)))
 
+"""'case'-block within a switch statement."""
 switch_case = Block(name="case", head=no_output_statement, content=code, end=False)
 
+"""'otherwise'-block within a switch statement."""
 switch_otherwise = Block(name="otherwise", content=code, end=False)
 
+"""Switch statement code block"""
 switch = Block(
     name="switch",
     head=no_output_statement,
@@ -403,13 +433,28 @@ classdef = Block(
     content=code,
 )
 
+properties = Block(
+    name="properties",
+    head=or_none(arguments_list),
+    content=code,
+)
+
 methods = Block(
     name="methods",
+    head=or_none(arguments_list),
     content=code,
 )
 
 command_identifier = Combine(identifier + Opt(".*"))
-command = space_delimited_list(command_identifier) + FollowedBy(construct_delimiter)
+command = (
+    ZeroOrMore(
+        command_identifier
+        + element_delimiter
+        + FollowedBy(command_identifier)
+    )
+    + command_identifier
+    + FollowedBy(construct_delimiter)
+)
 
 any_block = (
     if_block
@@ -420,11 +465,15 @@ any_block = (
     | switch
     | classdef
     | methods
+    | properties
 )
 
 code << ows_delimited_list(command | statement | comment | any_block, allow_empty=True)
 
+"""A file consisting of code wrapped by optional white space."""
 file = ows + code + ows
+
+# Packrat gives a massive performance increase.
 file.enablePackrat()
 
 # Add parse actions to grammar objects which turn the tokens into the respective dataclass.
@@ -452,6 +501,7 @@ parse_actions = {
     command: model.Command,
     classdef: model.Classdef,
     methods: model.Methods,
+    properties: model.Properties
 }
 
 for parser_element, target_class in parse_actions.items():
