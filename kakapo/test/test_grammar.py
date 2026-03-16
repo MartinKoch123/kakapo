@@ -241,6 +241,19 @@ def test_array(string):
     expected = str(model)
     assert expected == string
 
+@pytest.mark.parametrize(
+    "string",
+    (
+        "function func()\ndisp('hello')\nend ;",
+        "function func()\ndisp('hello')",
+    )
+)
+def test_function(string):
+    model = grammar.function.parse_string(string, parse_all=True)[0]
+    expected = str(model)
+    assert expected == string
+
+
 
 if __name__ == "__main__":
     pytest.main()

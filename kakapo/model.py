@@ -199,7 +199,7 @@ class Composite2:
 
     def __str__(self) -> str:
         return "".join(map(str, self))
-    
+
     def iterate(self, types: Sequence[Type] | None = None) -> Component:
         for child in self:
             if types is None or any(isinstance(child, type_) for type_ in types):
@@ -265,15 +265,10 @@ class Call(Composite):
         return self.arguments_list.elements
 
 
-class Comment(Composite, Construct):
-
-    @property
-    def marker(self):
-        return self[0]
-
-    @property
-    def string(self):
-        return self[1]
+@dataclass
+class Comment(Composite2, Construct):
+    marker: str
+    content: str
 
 
 class Operation(ElementsList):
@@ -298,23 +293,6 @@ class Statement(Composite2, Construct):
     body: Component
     whitespace_before_semicolon: str
     semicolon: str
-
-
-# class Statement(Composite, Construct):
-
-#     _OUTPUT_ARGUMENTS = 0
-#     _BODY = 1
-
-#     @property
-#     def output_arguments(self) -> Sequence:
-#         output_args_list = self[self._OUTPUT_ARGUMENTS]
-#         if output_args_list is None:
-#             return tuple()
-#         return output_args_list.elements
-
-#     @property
-#     def body(self):
-#         return self[self._BODY]
 
 
 class Code(Composite):
@@ -352,25 +330,6 @@ class Block(Composite2, Construct):
     end_keyword: str
     whitespace_before_semicolon: str
     semicolon: str
-
-    # @property
-    # def head(self) -> Component:
-    #     return self.children[2]
-
-    # @property
-    # def body(self) -> Component:
-    #     return self.children[4]
-
-    # def iterate_with_indent(self, level: int = 0) -> tuple[Component, int]:
-    #     for i, child in enumerate(self):
-    #         if i == 4:
-    #             level += 1
-    #         if i == 5:
-    #             level += -1
-    #         yield child, level
-    #         if isinstance(child, Composite):
-    #             for grand_child, grand_child_level in child.iterate_with_indent(level):
-    #                 yield grand_child, grand_child_level
 
 
 class Function(Block):
@@ -431,8 +390,11 @@ class Otherwise(Block):
     pass
 
 
-class File(Composite):
-    pass
+@dataclass
+class File(Composite2):
+    leading_whitespace: str
+    code: Code
+    trailing_whitespace: str
 
 
 class AnonymousFunction(Composite):

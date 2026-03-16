@@ -209,9 +209,9 @@ class Block(ParserElement):
         )
         if isinstance(end, str):
             assert end == "optional"
-            end_element |= nothing(2)
+            end_element |= nothing(4)
         elif not end:
-            end_element = nothing(2)
+            end_element = nothing(4)
 
         self.parser = (
             Literal(name)

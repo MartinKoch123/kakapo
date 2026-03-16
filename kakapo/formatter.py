@@ -40,7 +40,7 @@ def normalize_whitespace_in_assignment(code: model.Component):
                 element.whitespace_after_equal_sign = " "
 
 
-def remove_semicolon_and_whitespace_after_end_keyword(code: model.Component):
+def remove_white_space_and_semicolon_after_end_keyword(code: model.Component):
     """Remove optional semicolon after the 'end' keyword."""
     for element in code.iterate():
         match element:
@@ -49,18 +49,23 @@ def remove_semicolon_and_whitespace_after_end_keyword(code: model.Component):
                 element.semicolon = ""
 
 
-def remove_semicolon_after_if_condition(code: model.Component):
-    for element in code.iterate([model.If]):
-        if element.head.children[-1] == ";":
-            element.head.children[-1] = ""
+def remove_white_space_and_semicolon_after_if_condition(code: model.Component):
+    for element in code.iterate():
+        match element:
+            case model.If():
+                head: model.Statement = element.head
+                head.whitespace_before_semicolon = ""
+                head.semicolon = ""
 
 
-def remove_semicolon_after_keyword(code: model.Component):
-    for element in code.iterate([model.Statement]):
-        core = element.children[-3]
-        if isinstance(core, model.Leaf) and core.value in ["return", "break", "continue"]:
-            element.children[-2] = ""
-            element.children[-1] = ""
+def remove_white_space_and_semicolon_after_keyword(code: model.Component):
+    for element in code.iterate():
+        match element:
+            case model.Statement(
+                body=model.Leaf(value="return" | "break" | "continue")
+            ):
+                element.whitespace_before_semicolon = ""
+                element.semicolon = ""
 
 
 def remove_white_space_before_semicolon(code: model.Component):
@@ -68,31 +73,35 @@ def remove_white_space_before_semicolon(code: model.Component):
         match element:
             case model.Statement():
                 element.whitespace_before_semicolon = ""
-        
+
 
 def normalize_indentation(element: model.Component):
 
     for element, level in element.iterate_with_indent():
 
-        if (
-                not isinstance(element, model.Construct)
-                and (not isinstance(element, model.Leaf) or element.value not in ["end", "elseif", "else"])
+        if not isinstance(element, model.Construct) and (
+            not isinstance(element, model.Leaf)
+            or element.value not in ["end", "elseif", "else"]
         ):
             continue
         parent = element.parent
 
         element_is_block_head = (
-                parent
-                and isinstance(parent, model.Block)
-                and type(parent.head) is type(element)
-                and parent.head == element
+            parent
+            and isinstance(parent, model.Block)
+            and type(parent.head) is type(element)
+            and parent.head == element
         )
         if element_is_block_head:
             continue
 
         # Workaround for for elseif. #TODO refactor model.If
         own_index = parent.index_of_child(element)
-        if own_index > 1 and isinstance(parent[own_index - 2], model.Leaf) and parent[own_index - 2].value == "elseif":
+        if (
+            own_index > 1
+            and isinstance(parent[own_index - 2], model.Leaf)
+            and parent[own_index - 2].value == "elseif"
+        ):
             continue
 
         indent = level * INDENT
@@ -115,27 +124,30 @@ def normalize_indentation(element: model.Component):
 
 def ensure_function_end(element: model.Component):
     """Ensure function block ends with 'end' keyword."""
-    for element in element.iterate(types=[model.Function]):
-        if element.children[5] == "":
-            element.children[5] = "\n"
-        element.children[6] = "end"
+    for element in element.iterate():
+        match element:
+            case model.Function():
+                if element.whitespace_before_end == "":
+                    element.whitespace_before_end = "\n"
+                element.end_keyword = "end"
 
 
 def normalize_trailing_whitespace(file: model.File):
     """Remove all trailing whitespace in a file and add a newline."""
-    file[2] = "\n"
+    file.trailing_whitespace = "\n"
 
 
 def normalize_leading_whitespace(file: model.File):
     """Remove all leading whitespace in a file."""
-    file[0] = ""
+    file.leading_whitespace = ""
 
 
 def ensure_comment_leading_space(element: model.Component):
-    for comment in element.iterate(types=[model.Comment]):
-        content = comment[1]
-        if content and content[0] != " ":
-            comment[1] = " " + content
+    """Ensure there is a single space after the comment marker if the comment is not empty."""
+    for element in element.iterate():
+        match element:
+            case model.Comment(content=c) if c and not c.startswith(" "):
+                element.content = " " + c
 
 
 def ensure_empty_line_before_comment(element: model.Component):
@@ -191,10 +203,10 @@ def format_file(file: model.File):
     normalize_whitespace_in_arguments_list(file)
     normalize_whitespace_in_parenthesized(file)
     normalize_whitespace_in_assignment(file)
-    remove_semicolon_and_whitespace_after_end_keyword(file)
-    remove_semicolon_after_if_condition(file)
+    remove_white_space_and_semicolon_after_end_keyword(file)
+    remove_white_space_and_semicolon_after_if_condition(file)
     remove_white_space_before_semicolon(file)
-    remove_semicolon_after_keyword(file)
+    remove_white_space_and_semicolon_after_keyword(file)
     normalize_indentation(file)
     ensure_function_end(file)
     normalize_leading_whitespace(file)
