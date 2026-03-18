@@ -54,8 +54,8 @@ def test_remove_white_space_before_semicolon(input_: str, expected: str):
         ("function func()\n clear\n end;", "function func()\n clear\n end"),
     ],
 )
-def test_remove_semicolon_and_whitespace_after_end_keyword(input_: str, expected: str):
-    actual = format(formatter.remove_semicolon_and_whitespace_after_end_keyword, input_)
+def test_remove_white_space_and_semicolon_after_end_keyword(input_: str, expected: str):
+    actual = format(formatter.remove_white_space_and_semicolon_after_end_keyword, input_)
     assert actual == expected
 
 
