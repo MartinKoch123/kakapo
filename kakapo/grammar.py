@@ -9,6 +9,7 @@ Todo:
  - Support all format of command arguments.
 
 """
+# pyright: reportUnusedExpression=false
 
 
 from typing import Sequence
@@ -116,16 +117,18 @@ class ReservedKeyword(ParserElement):
 
 
 """White space including ellipsis."""
-ws = Combine((White(" \t\n") | Literal("..."))[1, ...]).parse_with_tabs()
+ws = Combine(
+    (
+        White(" \t\n") 
+        | Literal("...")
+    )[1, ...]
+).parse_with_tabs()
 
 """Optional white space"""
 ows = Opt(ws, default="").parse_with_tabs()
 
 element_delimiter = Combine(
-    (
-        White(" \t")
-        | (Literal("...") + Regex(r"[ \t]*\n?[ \t]*"))
-    )[1, ...]
+    (White(" \t") | (Literal("...") + Regex(r"[ \t]*\n?[ \t]*")))[1, ...]
 ).parse_with_tabs()
 
 optional_element_delimiter = Opt(element_delimiter, default="").parse_with_tabs()
@@ -268,7 +271,10 @@ keyword_pattern = {
     "DontEndWithDot": r"(?<!\.)",
 }
 
-identifier = ~ReservedKeyword() + Regex("".join(keyword_pattern.values()))
+identifier = (
+    ~ReservedKeyword() 
+    + Regex("".join(keyword_pattern.values()))
+) # fmt: skip
 
 """A comment. Starts at the comment marker '%' end ends at the next line break."""
 comment = Literal("%") + rest_of_line
@@ -283,9 +289,10 @@ construct_delimiter = Combine(
 
 
 """A quoted string with single or double quotes."""
-string = QuotedString(
-    quote_char='"', esc_quote='""', unquote_results=False
-) | QuotedString(quote_char="'", esc_quote="''", unquote_results=False)
+string = (
+    QuotedString(quote_char='"', esc_quote='""', unquote_results=False) | 
+    QuotedString(quote_char="'", esc_quote="''", unquote_results=False)
+) # fmt: skip
 
 expression = Forward()
 
@@ -293,7 +300,10 @@ expression = Forward()
 array_delimiter = Literal(",") | Literal(";")
 array = parenthesized(
     DelimitedList(
-        expression, min_elements=0, delimiter=array_delimiter, optional_delimiter=True
+        expression,
+        min_elements=0,
+        delimiter=array_delimiter,
+        optional_delimiter=True,
     ),
     brackets=(("[", "]"), ("{", "}")),
 ).set_name("Array")
@@ -316,11 +326,12 @@ output_statement = Forward()
 argument_brackets = (("(", ")"), ("{", "}"))
 argument = output_statement | expression | Literal(":")
 arguments_list = (
-    Opt(Literal("."), default="")
+    Opt(Literal("."), default="") 
     + parenthesized(
-        DelimitedList(argument, min_elements=0), brackets=argument_brackets
+        DelimitedList(argument, min_elements=0), 
+        brackets=argument_brackets,
     )
-)
+) # fmt: skip
 
 """A variable or a function call with or without arguments. Includes nested calls."""
 call << (identifier + or_none(arguments_list[1, ...]))
@@ -447,11 +458,7 @@ methods = Block(
 
 command_identifier = Combine(identifier + Opt(".*"))
 command = (
-    ZeroOrMore(
-        command_identifier
-        + element_delimiter
-        + FollowedBy(command_identifier)
-    )
+    ZeroOrMore(command_identifier + element_delimiter + FollowedBy(command_identifier))
     + command_identifier
     + FollowedBy(construct_delimiter)
 )
@@ -476,7 +483,7 @@ file = ows + code + ows
 # Packrat gives a massive performance increase.
 file.enable_packrat()
 
-# Add parse actions to grammar objects which turn the tokens into the respective dataclass.
+# Add parse actions to grammar objects that turn the tokens into the respective dataclass.
 parse_actions = {
     arguments_list: model.ArgumentsList,
     function: model.Function,
@@ -501,7 +508,7 @@ parse_actions = {
     command: model.Command,
     classdef: model.Classdef,
     methods: model.Methods,
-    properties: model.Properties
+    properties: model.Properties,
 }
 
 for parser_element, target_class in parse_actions.items():
@@ -511,10 +518,10 @@ for parser_element, target_class in parse_actions.items():
 def parse_string(s: str) -> model.File:
     """Parse a MATLAB code string and return its representation model."""
     parse_result = file.parse_string(s, parse_all=True)
-    return parse_result[0]
+    return parse_result[0]  # type: ignore
 
 
 def parse_file(file_path: Path | str) -> model.File:
     """Parse a MATLAB .m file and return its representation model."""
     parse_result = file.parse_file(str(file_path), parse_all=True)
-    return parse_result[0]
+    return parse_result[0]  # type: ignore
