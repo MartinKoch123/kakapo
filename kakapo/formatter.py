@@ -7,20 +7,20 @@ INDENT = 4 * " "
 
 
 def normalize_whitespace_in_arguments_list(code: model.Component):
-    for element in code.iterate(types=[model.ElementsList]):
-        element: model.ElementsList
-
-        for i, token in enumerate(element.elements_list):
-            # Children 1, 3, ... are whitespace and delimiters.
-            if i % 2 == 0:
-                continue
-            token: str = token
-            token = token.strip(" \n\t")  # Remove whitespace surrounding delimiter
-            token = token.replace("...", "")  # Remove ellipsis
-            token += " "  # Add single space after delimiter.
-            if isinstance(element, model.Operation):
-                token = " " + token
-            element.elements_list.children[i] = token
+    for element in code.iterate():
+        match element:
+            case model.ElementsList():
+                for i, token in enumerate(element.elements_list):
+                    # Children 1, 3, ... are whitespace and delimiters.
+                    if i % 2 == 0:
+                        continue
+                    token: str = token
+                    token = token.strip(" \n\t")  # Remove whitespace surrounding delimiter
+                    token = token.replace("...", "")  # Remove ellipsis
+                    token += " "  # Add single space after delimiter.
+                    if isinstance(element, model.Operation):
+                        token = " " + token
+                    element.elements_list.children[i] = token
 
 
 def normalize_whitespace_in_parenthesized(code: model.Composite):
@@ -152,19 +152,36 @@ def ensure_comment_leading_space(element: model.Component):
 
 def ensure_empty_line_before_comment(element: model.Component):
     """Ensures an empty line before each block of comments."""
-    for element in element.iterate(types=[model.Comment]):
-        if element.predecessor is None:
-            continue
-        assert type(element.predecessor) is str
+    for element in element.iterate():
+        match element:
+            # case model.Comment() if element.predecessor is not None:
+            #     assert type(element.predecessor) is str
 
-        parent = element.parent
-        i_element = parent.index_of_child(element)
+            #     parent = element.parent
+            #     i_element = parent.index_of_child(element)
 
-        if isinstance(parent[i_element - 2], model.Comment):
-            continue
+            #     if isinstance(parent[i_element - 2], model.Comment):
+            #         continue
 
-        if element.predecessor.count("\n") < 2:
-            parent[i_element - 1] = "\n" + element.predecessor
+            #     if element.predecessor.count("\n") < 2:
+            #         parent[i_element - 1] = "\n" + element.predecessor
+            case model.Code():
+                for i, child in enumerate(element.children):
+                    if i < 2:
+                        continue
+                    if not isinstance(child, model.Comment):
+                        continue
+                    predecessor = element.children[i - 1]
+                    prepredecessor = element.children[i - 2]
+                    if isinstance(prepredecessor, model.Comment):
+                        continue
+                    assert type(predecessor) is str
+                    if predecessor.count("\n") != 1: # Inline comment, or already has an empty line before it.
+                        continue
+                    element.children[i - 1] = "\n" + predecessor
+                    
+
+
 
 
 def break_arguments(element: model.Component, max_line_length: int = 120):

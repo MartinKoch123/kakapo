@@ -108,8 +108,8 @@ def test_import(string, expected):
 @pytest.mark.parametrize(
     "string, expected",
     [
-        ("% hello world", model.Comment(("%", " hello world"))),
-        ("%", model.Comment(("%", ""))),
+        ("% hello world", model.Comment("%", " hello world")),
+        ("%", model.Comment("%", "")),
     ],
 )
 def test_comment(string, expected):
@@ -125,8 +125,8 @@ def test_array_delimiter(string):
 @pytest.mark.parametrize(
     "string, expected",
     [
-        ("clear", model.Command(["clear"])),
-        ("clear a123 b_", model.Command(["clear", " ", "a123", " ", "b_"])),
+        ("clear", model.Command.from_line("clear")),
+        ("clear a123 b_", model.Command.from_line("clear a123 b_")),
         # ("command -flag arg", model.Command(["command", " ", "-flag", " ", "arg"]))
     ],
 )

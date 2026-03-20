@@ -135,3 +135,28 @@ def test_normalize_leading_whitespace(input_: str, expected: str):
 def test_ensure_comment_leading_space(input_: str, expected: str):
     actual = format(formatter.ensure_comment_leading_space, input_)
     assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "input_, expected",
+    (
+        ("func(1,  2\t\t,  3)", "func(1, 2, 3)"),
+        ("func(max(1, 2)  , 'text',   3.12)", "func(max(1, 2), 'text', 3.12)"),
+    ),
+)
+def test_normalize_whitespace_in_arguments_list(input_: str, expected: str):
+    actual = format(formatter.normalize_whitespace_in_arguments_list, input_)
+    assert actual == expected
+
+@pytest.mark.parametrize(
+    "input_, expected",
+    (
+        ("disp('hello') %comment", "disp('hello') %comment"),
+        ("disp('hello')\n%comment", "disp('hello')\n\n%comment"),
+        ("disp('hello')\n\n%comment", "disp('hello')\n\n%comment"),
+        ("disp('hello')\n\n\n%comment", "disp('hello')\n\n\n%comment"),
+    ),
+)
+def test_ensure_empty_line_before_comment(input_: str, expected: str):
+    actual = format(formatter.ensure_empty_line_before_comment, input_)
+    assert actual == expected
