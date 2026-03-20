@@ -154,17 +154,6 @@ def ensure_empty_line_before_comment(element: model.Component):
     """Ensures an empty line before each block of comments."""
     for element in element.iterate():
         match element:
-            # case model.Comment() if element.predecessor is not None:
-            #     assert type(element.predecessor) is str
-
-            #     parent = element.parent
-            #     i_element = parent.index_of_child(element)
-
-            #     if isinstance(parent[i_element - 2], model.Comment):
-            #         continue
-
-            #     if element.predecessor.count("\n") < 2:
-            #         parent[i_element - 1] = "\n" + element.predecessor
             case model.Code():
                 for i, child in enumerate(element.children):
                     if i < 2:
