@@ -383,8 +383,10 @@ class AnonymousFunction(Composite):
         return self.arguments_list.elements
 
 
+@dataclass
 class Array(ElementsList):
     parenthesized: Parenthesized
+    # stuff: Any
 
     @property
     def elements_list(self) -> DelimitedList:
