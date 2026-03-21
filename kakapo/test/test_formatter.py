@@ -55,7 +55,9 @@ def test_remove_white_space_before_semicolon(input_: str, expected: str):
     ],
 )
 def test_remove_white_space_and_semicolon_after_end_keyword(input_: str, expected: str):
-    actual = format(formatter.remove_white_space_and_semicolon_after_end_keyword, input_)
+    actual = format(
+        formatter.remove_white_space_and_semicolon_after_end_keyword, input_
+    )
     assert actual == expected
 
 
@@ -69,9 +71,12 @@ def test_remove_white_space_and_semicolon_after_end_keyword(input_: str, expecte
         ),
     ],
 )
-def test_remove_semicolon_after_if_condition(input_: str, expected: str):
+def test_remove_white_space_and_semicolon_after_if_condition(
+    input_: str, expected: str
+):
     actual = format(
-        formatter.remove_white_space_and_semicolon_after_if_condition, input_
+        formatter.remove_white_space_and_semicolon_after_if_condition,
+        input_,
     )
     assert actual == expected
 
@@ -148,6 +153,7 @@ def test_normalize_whitespace_in_arguments_list(input_: str, expected: str):
     actual = format(formatter.normalize_whitespace_in_arguments_list, input_)
     assert actual == expected
 
+
 @pytest.mark.parametrize(
     "input_, expected",
     (
@@ -159,4 +165,15 @@ def test_normalize_whitespace_in_arguments_list(input_: str, expected: str):
 )
 def test_ensure_empty_line_before_comment(input_: str, expected: str):
     actual = format(formatter.ensure_empty_line_before_comment, input_)
+    assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "string, expected",
+    (
+        (" x", "x"),
+    )
+)
+def test_normalize_indentation(string: str, expected: str):
+    actual = format(formatter.normalize_indentation, string)
     assert actual == expected

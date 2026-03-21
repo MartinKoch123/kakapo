@@ -48,7 +48,7 @@ class Component(ABC):
     def iterate(self, types: Sequence | None = None):
         return iter(())
 
-    def iterate_with_indent(self, level: int = 0) -> tuple[Component, int]:
+    def iterate_with_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
         raise NotImplementedError()
 
     def __len__(self) -> int:
