@@ -14,6 +14,15 @@ def assert_parsing_returns_unmodified_string(element: pp.ParserElement, string: 
     assert [string] == result.as_list()
 
 
+@pytest.mark.parametrize(
+    "string", ("var", "x", "TEST", "x_123", "a" * 63)
+)
+def test_identifier(string):
+    actual = grammar.identifier.parse_string(string)[0]
+    expected = model.Leaf(string)
+    assert actual == expected
+
+
 @pytest.mark.parametrize("string", [" ", "\t", "\n", "\t\n"])
 def test_white_space(string):
     assert_parsing_returns_unmodified_string(grammar.ws, string)
@@ -82,11 +91,6 @@ def test_keyword_error(string):
     assert_parsing_fails(grammar.ReservedKeyword(), string)
 
 
-@pytest.mark.parametrize("string", ["a", "TEST", "x_123", "a" * 63])
-def test_identifier(string):
-    assert_parsing_returns_unmodified_string(grammar.identifier, string)
-
-
 @pytest.mark.parametrize("string", ["", "_a", "asd$"])
 def test_identifier_error(string):
     assert_parsing_fails(grammar.identifier, string)
@@ -152,18 +156,18 @@ def test_command_error(string):
     (
         (
             "a",
-            grammar.DelimitedList(pp.Word(pp.alphas), delimiter=","),
-            model.DelimitedList(["a"]),
+            grammar.DelimitedList(grammar.identifier, delimiter=","),
+            model.DelimitedList([model.Leaf("a")]),
         ),
         (
             "a\n, b",
-            grammar.DelimitedList(pp.Word(pp.alphas), delimiter=","),
-            model.DelimitedList(["a", "\n, ", "b"]),
+            grammar.DelimitedList(grammar.identifier, delimiter=","),
+            model.DelimitedList([model.Leaf(s) for s in ["a", "\n, ", "b"]]),
         ),
         (
             "a ;; b   ;;c",
-            grammar.DelimitedList(pp.Word(pp.alphas), delimiter=";;"),
-            model.DelimitedList(["a", " ;; ", "b", "   ;;", "c"]),
+            grammar.DelimitedList(grammar.identifier, delimiter=";;"),
+            model.DelimitedList([model.Leaf(s) for s in ["a", " ;; ", "b", "   ;;", "c"]]),
         ),
     )
 )

@@ -9,6 +9,7 @@ Todo:
  - Support all format of command arguments.
 
 """
+
 # pyright: reportUnusedExpression=false
 
 
@@ -122,7 +123,7 @@ ws = Combine(
         White(" \t\n") 
         | Literal("...")
     )[1, ...]
-).parse_with_tabs()
+).parse_with_tabs() # fmt: skip
 
 """Optional white space"""
 ows = Opt(ws, default="").parse_with_tabs()
@@ -161,28 +162,36 @@ class DelimitedList(ParserElement):
 
     def __init__(
         self,
-        expr: ParserElement,
-        delimiter: str | ParserElement = ",",
+        element: ParserElement,
+        delimiter: str | ParserElement,
         min_elements: int = 1,
-        optional_delimiter: bool = False,
+        delimiter_is_optional: bool = False,
     ):
         super().__init__()
 
         if isinstance(delimiter, str):
             delimiter = Literal(delimiter)
         delimiter = ows + delimiter + ows
-        if optional_delimiter:
+        if delimiter_is_optional:
             delimiter = delimiter | ws
-        delimiter.add_parse_action(lambda s, loc, toks: model.Leaf("".join(str(t) for t in toks)))
-        self.parser = (expr + delimiter + FollowedBy(expr))[
-            max(min_elements - 1, 0), ...
-        ] + expr
+        delimiter.add_parse_action(
+            lambda s, loc, toks: model.Leaf("".join(str(t) for t in toks))
+        )
+        min_sub_exp = max(min_elements - 1, 0)
+        self.parser = (
+            (
+                element 
+                + delimiter 
+                + FollowedBy(element)
+            )[min_sub_exp, ...] 
+            + element
+        ) # fmt: skip
         if min_elements == 0:
             self.parser = self.parser | empty
 
     def parseImpl(self, instring, loc, doActions=True):
         loc, tokens = self.parser._parse(instring, loc, doActions)
-        return loc, model.DelimitedList(tokens)
+        return loc, model.DelimitedList(list(tokens))
 
     def _generateDefaultName(self) -> str:
         return "DelimitedList"
@@ -303,7 +312,7 @@ array = parenthesized(
         expression,
         min_elements=0,
         delimiter=array_delimiter,
-        optional_delimiter=True,
+        delimiter_is_optional=True,
     ),
     brackets=(("[", "]"), ("{", "}")),
 ).set_name("Array")
@@ -312,7 +321,7 @@ call = Forward()
 
 output_arguments = (
     parenthesized(
-        DelimitedList(call),
+        DelimitedList(call, delimiter=","),
         brackets=(("[", "]"),),
         optional=True,
     )
@@ -328,7 +337,7 @@ argument = output_statement | expression | Literal(":")
 arguments_list = (
     Opt(Literal("."), default="") 
     + parenthesized(
-        DelimitedList(argument, min_elements=0), 
+        DelimitedList(argument, delimiter=",", min_elements=0), 
         brackets=argument_brackets,
     )
 ) # fmt: skip
