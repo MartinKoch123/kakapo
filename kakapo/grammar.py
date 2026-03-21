@@ -274,7 +274,7 @@ Examples:
  - test123
  - a.b.c
 """
-keyword_pattern = {
+identifier_pattern = {
     "Initial": r"[A-Za-z]",
     "Body": r"[\w.]*",
     "DontEndWithDot": r"(?<!\.)",
@@ -282,10 +282,10 @@ keyword_pattern = {
 
 identifier = (
     ~ReservedKeyword() 
-    + Regex("".join(keyword_pattern.values()))
+    + Regex("".join(identifier_pattern.values()))
 ) # fmt: skip
 
-"""A comment. Starts at the comment marker '%' end ends at the next line break."""
+"""A comment. Starts at the comment marker '%' end ends before the next line break."""
 comment = Literal("%") + rest_of_line
 
 

@@ -14,15 +14,6 @@ def assert_parsing_returns_unmodified_string(element: pp.ParserElement, string: 
     assert [string] == result.as_list()
 
 
-@pytest.mark.parametrize(
-    "string", ("var", "x", "TEST", "x_123", "a" * 63)
-)
-def test_identifier(string):
-    actual = grammar.identifier.parse_string(string)[0]
-    expected = model.Leaf(string)
-    assert actual == expected
-
-
 @pytest.mark.parametrize("string", [" ", "\t", "\n", "\t\n"])
 def test_white_space(string):
     assert_parsing_returns_unmodified_string(grammar.ws, string)
@@ -43,6 +34,13 @@ def test_optional_white_space_error(string):
     assert_parsing_fails(grammar.ows, string)
 
 
+@pytest.mark.parametrize("string", ("var", "x", "TEST", "x_123", "a" * 63))
+def test_identifier(string):
+    actual = grammar.identifier.parse_string(string)[0]
+    expected = model.Leaf(string)
+    assert actual == expected
+
+
 @pytest.mark.parametrize(
     "string",
     [
@@ -52,7 +50,7 @@ def test_optional_white_space_error(string):
         " ... ...",
         "...\n",
         "...\n... \n \t",
-    ]
+    ],
 )
 def test_element_delimiter(string):
     assert_parsing_returns_unmodified_string(grammar.element_delimiter, string)
@@ -65,7 +63,7 @@ def test_element_delimiter(string):
         "\n",
         "\n ...",
         "...\n\n ",
-    ]
+    ],
 )
 def test_element_delimiter_error(string):
     assert_parsing_fails(grammar.element_delimiter, string)
@@ -100,12 +98,18 @@ def test_identifier_error(string):
     "string, expected",
     [
         ("import abc", model.Command([model.Leaf(s) for s in ["import", " ", "abc"]])),
-        ("import ab.cd.ef", model.Command([model.Leaf(s) for s in ["import", " ", "ab.cd.ef"]])),
-        ("import a.b.*", model.Command([model.Leaf(s) for s in ["import", " ", "a.b.*"]])),
+        (
+            "import ab.cd.ef",
+            model.Command([model.Leaf(s) for s in ["import", " ", "ab.cd.ef"]]),
+        ),
+        (
+            "import a.b.*",
+            model.Command([model.Leaf(s) for s in ["import", " ", "a.b.*"]]),
+        ),
     ],
 )
 def test_import(string, expected):
-    actual = grammar.parse_string(string).code[0] # noqa
+    actual = grammar.parse_string(string).code[0]  # noqa
     assert actual == expected
 
 
@@ -130,7 +134,10 @@ def test_array_delimiter(string):
     "string, expected",
     [
         ("clear", model.Command([model.Leaf("clear")])),
-        ("clear a123 b_", model.Command([model.Leaf(s) for s in ["clear", " ", "a123", " ", "b_"]])),
+        (
+            "clear a123 b_",
+            model.Command([model.Leaf(s) for s in ["clear", " ", "a123", " ", "b_"]]),
+        ),
         # ("command -flag arg", model.Command(["command", " ", "-flag", " ", "arg"]))
     ],
 )
@@ -145,7 +152,7 @@ def test_command(string, expected):
         "command\narg",
         "command;arg",
         "command(arg)",
-    ]
+    ],
 )
 def test_command_error(string):
     assert_parsing_fails(grammar.command, string)
@@ -167,13 +174,16 @@ def test_command_error(string):
         (
             "a ;; b   ;;c",
             grammar.DelimitedList(grammar.identifier, delimiter=";;"),
-            model.DelimitedList([model.Leaf(s) for s in ["a", " ;; ", "b", "   ;;", "c"]]),
+            model.DelimitedList(
+                [model.Leaf(s) for s in ["a", " ;; ", "b", "   ;;", "c"]]
+            ),
         ),
-    )
+    ),
 )
 def test_delimited_list(string, parser, expected):
     actual = parser.parse_string(string, parse_all=True)[0]
     assert actual == expected
+
 
 @pytest.mark.parametrize(
     ("input_", "expected"),
@@ -182,11 +192,12 @@ def test_delimited_list(string, parser, expected):
         ('"test"', '"test"'),
         ('"a""b"', '"a""b"'),
         ('"a' 'b"', '"a' 'b"'),
-    )
+    ),
 )
 def test_string(input_, expected):
     actual = grammar.string.parse_string(input_)[0]
     assert actual == expected
+
 
 @pytest.mark.parametrize(
     "string",
@@ -197,12 +208,13 @@ def test_string(input_, expected):
         "func(1)",
         "func(1, a)",
         "func(1,a,  c)",
-    )
+    ),
 )
 def test_call(string):
     model = grammar.call.parse_string(string, parse_all=True)[0]
     expected = str(model)
     assert expected == string
+
 
 @pytest.mark.parametrize(
     "string",
@@ -210,12 +222,13 @@ def test_call(string):
         "a + 1 + 's1' + \"s2\"",
         "1 - 2 / 3 * 4 == 5 ~= 6 > 7 < 8 >= 9 <= 10 .* 11 ./12 \\ 13",
         "1+2",
-    )
+    ),
 )
 def test_operation(string):
     model = grammar.operation.parse_string(string, parse_all=True)[0]
     expected = str(model)
     assert expected == string
+
 
 @pytest.mark.parametrize(
     "string",
@@ -225,12 +238,13 @@ def test_operation(string):
         "@(x, y) 1 + 2",
         "@() 1 + 2",
         "@mean",
-    )
+    ),
 )
 def test_anonymous_function(string):
     model = grammar.anonymous_function.parse_string(string, parse_all=True)[0]
     expected = str(model)
     assert expected == string
+
 
 @pytest.mark.parametrize(
     "string",
@@ -238,25 +252,25 @@ def test_anonymous_function(string):
         "[]",
         "[1, a, 'hello', true, mean(x + 1)]",
         "{1, 2, 3}",
-    )
+    ),
 )
 def test_array(string):
     model = grammar.array.parse_string(string, parse_all=True)[0]
     expected = str(model)
     assert expected == string
 
+
 @pytest.mark.parametrize(
     "string",
     (
         "function func()\ndisp('hello')\nend ;",
         "function func()\ndisp('hello')",
-    )
+    ),
 )
 def test_function(string):
     model = grammar.function.parse_string(string, parse_all=True)[0]
     expected = str(model)
     assert expected == string
-
 
 
 if __name__ == "__main__":
