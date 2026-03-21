@@ -126,13 +126,13 @@ ws = Combine(
 ).parse_with_tabs() # fmt: skip
 
 """Optional white space"""
-ows = Opt(ws, default="").parse_with_tabs()
+ows = Opt(ws, default=model.Leaf("")).parse_with_tabs()
 
 element_delimiter = Combine(
     (White(" \t") | (Literal("...") + Regex(r"[ \t]*\n?[ \t]*")))[1, ...]
 ).parse_with_tabs()
 
-optional_element_delimiter = Opt(element_delimiter, default="").parse_with_tabs()
+optional_element_delimiter = Opt(element_delimiter, default=model.Leaf("")).parse_with_tabs()
 
 operator = Or(OPERATORS)
 
@@ -521,7 +521,6 @@ parse_actions = {
     command_identifier: model.Leaf,
     identifier: model.Leaf,
     ws: model.Leaf,
-    ows: model.Leaf,
     element_delimiter: model.Leaf,
 }
 

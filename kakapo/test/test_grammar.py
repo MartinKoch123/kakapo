@@ -16,7 +16,8 @@ def assert_parsing_returns_unmodified_string(element: pp.ParserElement, string: 
 
 @pytest.mark.parametrize("string", [" ", "\t", "\n", "\t\n"])
 def test_white_space(string):
-    assert_parsing_returns_unmodified_string(grammar.ws, string)
+    actual = grammar.ws.parse_string(string)[0]
+    assert actual == model.Leaf(string)
 
 
 @pytest.mark.parametrize("string", ["", "abc"])
@@ -26,7 +27,8 @@ def test_white_space_error(string):
 
 @pytest.mark.parametrize("string", ["", " \t\n"])
 def test_optional_white_space(string):
-    assert_parsing_returns_unmodified_string(grammar.ows, string)
+    actual = grammar.ows.parse_string(string)[0]
+    assert actual == model.Leaf(string)
 
 
 @pytest.mark.parametrize("string", ["a", ".", "  b"])
@@ -53,7 +55,9 @@ def test_identifier(string):
     ],
 )
 def test_element_delimiter(string):
-    assert_parsing_returns_unmodified_string(grammar.element_delimiter, string)
+    actual = grammar.element_delimiter.parse_string(string)[0]
+    expected = model.Leaf(string)
+    assert actual == expected
 
 
 @pytest.mark.parametrize(
@@ -181,7 +185,7 @@ def test_command_error(string):
     ),
 )
 def test_delimited_list(string, parser, expected):
-    actual = parser.parse_string(string, parse_all=True)[0]
+    actual = parser.parse_string(string)[0]
     assert actual == expected
 
 
@@ -211,7 +215,7 @@ def test_string(input_, expected):
     ),
 )
 def test_call(string):
-    model = grammar.call.parse_string(string, parse_all=True)[0]
+    model = grammar.call.parse_string(string)[0]
     expected = str(model)
     assert expected == string
 
@@ -225,7 +229,7 @@ def test_call(string):
     ),
 )
 def test_operation(string):
-    model = grammar.operation.parse_string(string, parse_all=True)[0]
+    model = grammar.operation.parse_string(string)[0]
     expected = str(model)
     assert expected == string
 
@@ -241,7 +245,7 @@ def test_operation(string):
     ),
 )
 def test_anonymous_function(string):
-    model = grammar.anonymous_function.parse_string(string, parse_all=True)[0]
+    model = grammar.anonymous_function.parse_string(string)[0]
     expected = str(model)
     assert expected == string
 
@@ -255,7 +259,7 @@ def test_anonymous_function(string):
     ),
 )
 def test_array(string):
-    model = grammar.array.parse_string(string, parse_all=True)[0]
+    model = grammar.array.parse_string(string)[0]
     expected = str(model)
     assert expected == string
 
@@ -268,7 +272,7 @@ def test_array(string):
     ),
 )
 def test_function(string):
-    model = grammar.function.parse_string(string, parse_all=True)[0]
+    model = grammar.function.parse_string(string)[0]
     expected = str(model)
     assert expected == string
 
