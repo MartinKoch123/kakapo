@@ -173,7 +173,7 @@ class DelimitedList(ParserElement):
         delimiter = ows + delimiter + ows
         if optional_delimiter:
             delimiter = delimiter | ws
-        delimiter.add_parse_action(lambda s, loc, toks: ["".join(toks)])
+        delimiter.add_parse_action(lambda s, loc, toks: model.Leaf("".join(str(t) for t in toks)))
         self.parser = (expr + delimiter + FollowedBy(expr))[
             max(min_elements - 1, 0), ...
         ] + expr
@@ -509,6 +509,11 @@ parse_actions = {
     classdef: model.Classdef,
     methods: model.Methods,
     properties: model.Properties,
+    command_identifier: model.Leaf,
+    identifier: model.Leaf,
+    ws: model.Leaf,
+    ows: model.Leaf,
+    element_delimiter: model.Leaf,
 }
 
 for parser_element, target_class in parse_actions.items():

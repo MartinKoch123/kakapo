@@ -108,15 +108,15 @@ class Composite(Component):
         strings = [str(child) for child in self if child is not None]
         return "".join(strings)
 
-    def __getitem__(self, item: int):
-        return list(self)[item]
+    # def __getitem__(self, item: int):
+    #     return list(self)[item]
 
-    def __setitem__(self, item: int, value):
-        for i, f in enumerate(fields(self)):
-            if i == item:
-                setattr(self, f.name, value)
-                return
-        raise IndexError("Index out of range")
+    # def __setitem__(self, item: int, value):
+    #     for i, f in enumerate(fields(self)):
+    #         if i == item:
+    #             setattr(self, f.name, value)
+    #             return
+    #     raise IndexError("Index out of range")
 
     def __len__(self) -> int:
         return len(list(self))
@@ -277,6 +277,12 @@ class VariableLengthComposite(Composite):
     def __len__(self) -> int:
         return len(self.children)
     
+    def __getitem__(self, key):
+        return self.children[key]
+    
+    def __setitem__(self, key, value):
+        self.children[key] = value
+    
     @classmethod
     def from_tokens(cls, tokens: Sequence):
         return cls(list(tokens))
@@ -371,6 +377,7 @@ class File(Composite):
     trailing_whitespace: str
 
 
+@dataclass
 class AnonymousFunction(Composite):
     at_sign: str
     white_space_before_arguments: str
@@ -402,10 +409,7 @@ class SingleElementOperation(Composite):
 
 
 class Command(Construct, VariableLengthComposite):
-    
-    @classmethod
-    def from_line(cls, line: str):
-        return cls(children=[Leaf(part) for part in line.split()])
+    pass
 
 
 class Classdef(Block):

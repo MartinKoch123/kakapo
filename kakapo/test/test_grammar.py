@@ -95,13 +95,13 @@ def test_identifier_error(string):
 @pytest.mark.parametrize(
     "string, expected",
     [
-        ("import abc", model.Command(["import", " ", "abc"])),
-        ("import ab.cd.ef", model.Command(["import", " ", "ab.cd.ef"])),
-        ("import a.b.*", model.Command(["import", " ", "a.b.*"])),
+        ("import abc", model.Command([model.Leaf(s) for s in ["import", " ", "abc"]])),
+        ("import ab.cd.ef", model.Command([model.Leaf(s) for s in ["import", " ", "ab.cd.ef"]])),
+        ("import a.b.*", model.Command([model.Leaf(s) for s in ["import", " ", "a.b.*"]])),
     ],
 )
 def test_import(string, expected):
-    actual = grammar.parse_string(string)[1][0] # noqa
+    actual = grammar.parse_string(string).code[0] # noqa
     assert actual == expected
 
 
@@ -125,13 +125,13 @@ def test_array_delimiter(string):
 @pytest.mark.parametrize(
     "string, expected",
     [
-        ("clear", model.Command.from_line("clear")),
-        ("clear a123 b_", model.Command.from_line("clear a123 b_")),
+        ("clear", model.Command([model.Leaf("clear")])),
+        ("clear a123 b_", model.Command([model.Leaf(s) for s in ["clear", " ", "a123", " ", "b_"]])),
         # ("command -flag arg", model.Command(["command", " ", "-flag", " ", "arg"]))
     ],
 )
 def test_command(string, expected):
-    actual = grammar.parse_string(string)[1][0]
+    actual = grammar.parse_string(string).code[0]
     assert actual == expected
 
 
