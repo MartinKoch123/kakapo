@@ -94,12 +94,10 @@ class Composite(Component):
 
     def __eq__(self, other) -> bool:
         """Elements are equal if they have equal type and their children are equal."""
-        return (
-            type(self) is type(other)
-            and len(self) == len(other)
-            and all(
-                own_child == other_child for own_child, other_child in zip(self, other)
-            )
+        if type(self) is not type(other) or len(self) != len(other):
+            return False
+        return all(
+            own_child == other_child for own_child, other_child in zip(self, other)
         )
 
     def index_of_child(self, child: Component) -> int:
@@ -234,7 +232,7 @@ class Statement(Composite, Construct):
     semicolon: str
 
 
-@dataclass
+@dataclass(eq=False)
 class VariableLengthComposite(Composite):
     children: list[Component]
 
@@ -371,14 +369,17 @@ class Array(ElementsList):
         return self.elements_list.elements if self.elements_list is not None else None
 
 
+@dataclass
 class SingleElementOperation(Composite):
     pass
 
 
-class Command(Construct, VariableLengthComposite):
+@dataclass(eq=False)
+class Command(VariableLengthComposite, Construct):
     pass
 
 
+@dataclass
 class Classdef(Block):
     pass
 
