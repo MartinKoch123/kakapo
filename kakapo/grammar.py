@@ -33,6 +33,7 @@ from pyparsing import (
     QuotedString,
     Regex,
     rest_of_line,
+    ungroup,
     White,
     Word,
     ZeroOrMore,
@@ -219,9 +220,8 @@ class Block(ParserElement):
         end_element = (
             ws
             + Leaf("end")
-            + Opt(ows + Leaf(";"), default=model.Leaf(None)).add_parse_action(
-                lambda toks: ["", ""] if toks[0] is None else toks
-            )
+            + ows
+            + or_none(Leaf(";"))
         )
         if isinstance(end, str):
             assert end == "optional"
@@ -339,7 +339,7 @@ output_statement = Forward()
 argument_brackets = (("(", ")"), ("{", "}"))
 argument = output_statement | expression | Leaf(":")
 arguments_list = (
-    Opt(Leaf("."), default="")
+    Opt(Leaf("."), default=model.Leaf(None))
     + parenthesized(
         DelimitedList(argument, delimiter=",", min_elements=0), 
         brackets=argument_brackets,
@@ -392,8 +392,8 @@ keyword = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 
 statement_core = (
     (expression | keyword)
-    + Opt(ows + FollowedBy(Literal(";")), default=model.Leaf(None))
-    + Opt(Literal(";"), default=model.Leaf(None))
+    + Opt(ows + FollowedBy(Leaf(";")), default=model.Leaf(None))
+    + Opt(Leaf(";"), default=model.Leaf(None))
 )
 
 no_output_statement = nothing(1) + statement_core
@@ -527,6 +527,7 @@ parse_actions = {
     identifier: model.Leaf,
     ws: model.Leaf,
     element_delimiter: model.Leaf,
+    construct_delimiter: model.Leaf,
 }
 
 for parser_element, target_class in parse_actions.items():
