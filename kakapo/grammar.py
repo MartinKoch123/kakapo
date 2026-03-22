@@ -221,17 +221,12 @@ class Block(ParserElement):
 
         head = head if head else nothing()
 
-        end_element = (
-            ws
-            + Leaf("end")
-            + ows
-            + or_none(Leaf(";"))
-        )
+        end_element = ws + Leaf("end") + ows + or_none(Leaf(";"))
         if isinstance(end, str):
             assert end == "optional"
-            end_element |= (empty_string() + nothing() + empty_string() + nothing())
+            end_element |= empty_string() + nothing() + empty_string() + nothing()
         elif not end:
-            end_element = (empty_string() + nothing() + empty_string() + nothing())
+            end_element = empty_string() + nothing() + empty_string() + nothing()
 
         self.parser = (
             Leaf(name)
@@ -263,13 +258,21 @@ def parenthesized(
 ):
     # Turning this into a class was a lot slower for some reason
     with_parenthesis = Or(
-        (Leaf(opening_bracket) + ows + content + ows + Leaf(closing_bracket))
-        for opening_bracket, closing_bracket in brackets
-    )
+        (
+            Leaf(opening_bracket) 
+            + ows 
+            + content 
+            + ows 
+            + Leaf(closing_bracket)
+        ) for opening_bracket, closing_bracket in brackets
+    ) # fmt: skip
+
     if not optional:
         parser = with_parenthesis
     else:
-        without_parenthesis = nothing(2) + content + nothing(2)
+        without_parenthesis = (
+            nothing() + empty_string() + content + empty_string() + nothing()
+        )
         parser = with_parenthesis | without_parenthesis
     return parser.add_parse_action(model.Parenthesized.from_tokens).set_name(
         "Parenthesized"
@@ -533,7 +536,7 @@ parse_actions = {
     ws: model.Literal,
     element_delimiter: model.Literal,
     construct_delimiter: model.Literal,
-    string: model.Literal
+    string: model.Literal,
 }
 
 for parser_element, target_class in parse_actions.items():

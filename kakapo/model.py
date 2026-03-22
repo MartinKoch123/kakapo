@@ -39,7 +39,7 @@ class Component:
 
 @dataclass
 class Literal(Component):
-    """Component with no children."""
+    """Leaf with literal value."""
 
     value: str
 
@@ -63,6 +63,7 @@ class Literal(Component):
 
 @dataclass
 class Missing(Component):
+    """Leaf representing a missing optional element."""
     
     def __str__(self) -> str:
         return ""
@@ -103,12 +104,6 @@ class Composite(Component):
         return all(
             own_child == other_child for own_child, other_child in zip(self, other)
         )
-
-    def index_of_child(self, child: Component) -> int:
-        for i, other in enumerate(self):
-            if child is other:
-                return i
-        raise ValueError("Child not found.")
 
     def descendants_and_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
         for child in self:
@@ -176,7 +171,7 @@ class ElementsList(Composite):
 
 @dataclass
 class ArgumentsList(ElementsList):
-    dot: str
+    dot: Literal
     parenthesized: Parenthesized
 
     @property
@@ -191,9 +186,9 @@ class ArgumentsList(ElementsList):
 @dataclass
 class OutputArguments(Composite):
     elements_list: DelimitedList
-    whitespace_before_equal_sign: str
-    equal_sign: str
-    whitespace_after_equal_sign: str
+    whitespace_before_equal_sign: Literal
+    equal_sign: Literal
+    whitespace_after_equal_sign: Literal
 
 
 @dataclass
@@ -210,8 +205,8 @@ class Call(Composite):
 
 @dataclass
 class Comment(Composite, Construct):
-    marker: str
-    content: str
+    marker: Literal
+    content: Literal
 
 
 @dataclass
@@ -221,19 +216,19 @@ class Operation(ElementsList):
 
 @dataclass
 class Parenthesized(Composite):
-    opening_delimiter: str
-    whitespace_before_content: str
-    content: Component | str
-    whitespace_after_content: str
-    closing_delimiter: str
+    opening_delimiter: Literal
+    whitespace_before_content: Literal
+    content: Component
+    whitespace_after_content: Literal
+    closing_delimiter: Literal
 
 
 @dataclass
 class Statement(Composite, Construct):
     output_arguments: OutputArguments | Missing
     body: Component
-    whitespace_before_semicolon: str
-    semicolon: str
+    whitespace_before_semicolon: Literal
+    semicolon: Literal | Missing
 
 
 @dataclass(eq=False)
@@ -270,15 +265,15 @@ class DelimitedList(VariableLengthComposite):
 
 @dataclass
 class Block(Composite, Construct):
-    name: str
-    element_delimiter: Any
-    head: Any
-    construct_delimiter: Any
+    name: Literal
+    element_delimiter: Literal
+    head: Component | Missing
+    construct_delimiter: Literal
     body: Component
-    whitespace_before_end: str
-    end_keyword: str
-    whitespace_before_semicolon: str
-    semicolon: str
+    whitespace_before_end: Literal
+    end_keyword: Literal | Missing
+    whitespace_before_semicolon: Literal
+    semicolon: Literal | Missing
 
 
 class Function(Block):
@@ -341,17 +336,17 @@ class Otherwise(Block):
 
 @dataclass
 class File(Composite):
-    leading_whitespace: str
+    leading_whitespace: Literal
     code: Code
-    trailing_whitespace: str
+    trailing_whitespace: Literal
 
 
 @dataclass
 class AnonymousFunction(Composite):
-    at_sign: str
-    white_space_before_arguments: str
+    at_sign: Literal
+    white_space_before_arguments: Literal
     arguments_list: DelimitedList
-    white_space_after_arguments: str
+    white_space_after_arguments: Literal
     expression: Component
 
     @property
@@ -362,7 +357,6 @@ class AnonymousFunction(Composite):
 @dataclass
 class Array(ElementsList):
     parenthesized: Parenthesized
-    # stuff: Any
 
     @property
     def elements_list(self) -> DelimitedList | Missing:
