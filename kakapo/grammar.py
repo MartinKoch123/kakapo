@@ -90,12 +90,14 @@ KEYWORDS = [
     "while",
 ]
 
-# Turn-off the default behaviour of ignoring whitespace. Whitespace parsing will be handled manually.
+# Turn-off the default behavior of ignoring whitespace. Whitespace parsing will be handled manually.
 ParserElement.set_default_whitespace_chars("")
 
 
 def nothing(n: int = 1):
-    return Empty().set_parse_action(lambda s, loc, toks: ["" for i in range(n)])
+    return Empty().set_parse_action(
+        lambda s, loc, toks: [model.Leaf(None) for i in range(n)]
+    )
 
 
 def or_none(expr: ParserElement):
@@ -132,7 +134,9 @@ element_delimiter = Combine(
     (White(" \t") | (Literal("...") + Regex(r"[ \t]*\n?[ \t]*")))[1, ...]
 ).parse_with_tabs()
 
-optional_element_delimiter = Opt(element_delimiter, default=model.Leaf("")).parse_with_tabs()
+optional_element_delimiter = Opt(
+    element_delimiter, default=model.Leaf("")
+).parse_with_tabs()
 
 operator = Or(OPERATORS)
 
@@ -215,7 +219,7 @@ class Block(ParserElement):
         end_element = (
             ws
             + Leaf("end")
-            + Opt(ows + Literal(";"), default=model.Leaf(None)).add_parse_action(
+            + Opt(ows + Leaf(";"), default=model.Leaf(None)).add_parse_action(
                 lambda toks: ["", ""] if toks[0] is None else toks
             )
         )
@@ -226,7 +230,7 @@ class Block(ParserElement):
             end_element = nothing(4)
 
         self.parser = (
-            Literal(name)
+            Leaf(name)
             + optional_element_delimiter
             + head
             + construct_delimiter
@@ -255,7 +259,7 @@ def parenthesized(
 ):
     # Turning this into a class was a lot slower for some reason
     with_parenthesis = Or(
-        (opening_bracket + ows + content + ows + closing_bracket)
+        (Leaf(opening_bracket) + ows + content + ows + Leaf(closing_bracket))
         for opening_bracket, closing_bracket in brackets
     )
     if not optional:
@@ -286,7 +290,7 @@ identifier = (
 ) # fmt: skip
 
 """A comment. Starts at the comment marker '%' end ends before the next line break."""
-comment = Literal("%") + rest_of_line
+comment = Leaf("%") + rest_of_line
 
 
 construct_delimiter = Combine(
@@ -306,7 +310,7 @@ string = (
 expression = Forward()
 
 """Array"""
-array_delimiter = Literal(",") | Literal(";")
+array_delimiter = Leaf(",") | Leaf(";")
 array = parenthesized(
     DelimitedList(
         expression,
@@ -326,16 +330,16 @@ output_arguments = (
         optional=True,
     )
     + ows
-    + Literal("=")
+    + Leaf("=")
     + ows
 )
 
 output_statement = Forward()
 
 argument_brackets = (("(", ")"), ("{", "}"))
-argument = output_statement | expression | Literal(":")
+argument = output_statement | expression | Leaf(":")
 arguments_list = (
-    Opt(Literal("."), default="") 
+    Opt(Leaf("."), default="")
     + parenthesized(
         DelimitedList(argument, delimiter=",", min_elements=0), 
         brackets=argument_brackets,
@@ -351,15 +355,16 @@ Examples:
  - @(x) x + 1
  - @mean
 """
-anonymous_function = Literal("@") + ows + or_none(arguments_list) + ows + expression
+anonymous_function = Leaf("@") + ows + or_none(arguments_list) + ows + expression
 
+number = common.number.set_parse_action(model.Leaf.from_tokens)
 
 operand_atom = Forward()
 operation = Forward()
 operand = Forward()
 operand_atom << (
     call
-    | common.number
+    | number
     | string
     | array
     | anonymous_function
@@ -367,8 +372,8 @@ operand_atom << (
     | parenthesized(operation)
 )
 
-left_operation = (Literal("-") | Literal("~")) + operand_atom
-right_operation = operand_atom + (Literal("'") | Literal(".'"))
+left_operation = (Leaf("-") | Leaf("~")) + operand_atom
+right_operation = operand_atom + (Leaf("'") | Leaf(".'"))
 
 single_element_operation = left_operation | right_operation
 
@@ -387,8 +392,8 @@ keyword = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 
 statement_core = (
     (expression | keyword)
-    + Opt(ows + FollowedBy(Literal(";")), default="")
-    + Opt(Literal(";"), default="")
+    + Opt(ows + FollowedBy(Literal(";")), default=model.Leaf(None))
+    + Opt(Literal(";"), default=model.Leaf(None))
 )
 
 no_output_statement = nothing(1) + statement_core
@@ -424,7 +429,7 @@ while_loop = Block(name="while", head=no_output_statement, content=code)
 function = Block(name="function", head=statement, content=code, end="optional")
 
 catch = (
-    Literal("catch")
+    Leaf("catch")
     + Opt(White(" \t") + statement_core, default=model.Leaf(None)).add_parse_action(
         lambda toks: ["", ""] if toks[0] is None else toks
     )
@@ -531,7 +536,19 @@ for parser_element, target_class in parse_actions.items():
 def parse_string(s: str) -> model.File:
     """Parse a MATLAB code string and return its representation model."""
     parse_result = file.parse_string(s, parse_all=True)
-    return parse_result[0]  # type: ignore
+
+    file_ = parse_result[0]
+    for element in file_.iterate():
+        if isinstance(element, model.Composite):
+            children = list(element)
+            for i, child in enumerate(children):
+                child.parent = element
+                if i > 0:
+                    child._predecessor = children[i - 1]
+                if i < len(children) - 1:
+                    child._successor = children[i + 1]
+
+    return file_  # type: ignore
 
 
 def parse_file(file_path: Path | str) -> model.File:

@@ -17,31 +17,14 @@ class Component(ABC):
     def successor(self) -> Component | None:
         return self._successor
 
-    # @property
-    # def predecessor_index(self) -> int | None:
-    #     if self.parent is None:
-    #         raise ValueError("Component has no parent.")
-    #     own_index = self.parent.index_of_child(self)
-    #     if own_index > 0:
-    #         return own_index - 1
-
     @property
     def predecessor(self) -> Component | None:
         return self._predecessor
 
-    # @predecessor.setter
-    # def predecessor(self, value):
-    #     if not isinstance(value, str):
-    #         raise NotImplementedError("Only string is supported.")
-    #     index = self.predecessor_index
-    #     if index is None:
-    #         raise ValueError("Component is first child of parent.")
-    #     self.parent[index] = value
-
     def __iter__(self):
         return iter(())
 
-    def iterate(self, types: Sequence | None = None):
+    def iterate(self):
         return iter(())
 
     def iterate_with_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
@@ -54,6 +37,7 @@ class Component(ABC):
     def __str__(self) -> str:
         """Convert the code model to a code string."""
 
+
 @dataclass
 class Leaf(Component):
     """Component with no children."""
@@ -61,12 +45,9 @@ class Leaf(Component):
     value: str | None
 
     def __str__(self) -> str:
+        if self.value is None:
+            return ""
         return str(self.value)
-
-    # def __getitem__(self, item: int):
-    #     if item != 0:
-    #         raise IndexError("Leaf has only one component.")
-    #     return self.value
 
     def __repr__(self):
         name = self.__class__.__name__
@@ -86,20 +67,12 @@ class Leaf(Component):
 @dataclass
 class Composite(Component):
 
-    NON_CHILD_FIELDS = {"parent", "_successor", "_predecessor"}
-
-    def __post_init__(self):
-        super().__init__()
-        children = list(self)
-        for i, child in enumerate(children):
-            child.parent = self
-            if i > 0:
-                child._predecessor = children[i - 1]
-            if i < len(children) - 1:
-                child._successor = children[i + 1]
+    _NON_CHILD_FIELDS = {"parent", "_successor", "_predecessor"}
 
     def __iter__(self):
-        return (getattr(self, f.name) for f in fields(self) if f.name not in self.NON_CHILD_FIELDS)
+        for name in self.__dataclass_fields__:
+            if name not in self._NON_CHILD_FIELDS:
+                yield getattr(self, name)
 
     def iterate(self) -> Generator[Component]:
         for child in self:
@@ -111,16 +84,6 @@ class Composite(Component):
     def __str__(self) -> str:
         strings = [str(child) for child in self if child is not None]
         return "".join(strings)
-
-    # def __getitem__(self, item: int):
-    #     return list(self)[item]
-
-    # def __setitem__(self, item: int, value):
-    #     for i, f in enumerate(fields(self)):
-    #         if i == item:
-    #             setattr(self, f.name, value)
-    #             return
-    #     raise IndexError("Index out of range")
 
     def __len__(self) -> int:
         return len(fields(self))
@@ -277,16 +240,16 @@ class VariableLengthComposite(Composite):
 
     def __iter__(self):
         return iter(self.children)
-    
+
     def __len__(self) -> int:
         return len(self.children)
-    
+
     def __getitem__(self, key):
         return self.children[key]
-    
+
     def __setitem__(self, key, value):
         self.children[key] = value
-    
+
     @classmethod
     def from_tokens(cls, tokens: Sequence):
         return cls(list(tokens))
