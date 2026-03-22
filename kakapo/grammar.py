@@ -545,15 +545,15 @@ def parse_string(s: str) -> model.File:
     parse_result = file.parse_string(s, parse_all=True)
 
     file_: model.File = parse_result[0]
-    for element in itertools.chain([file_], file_.iterate()):
+    for element in itertools.chain([file_], file_.descendants()):
         if isinstance(element, model.Composite):
             children = list(element)
             for i, child in enumerate(children):
                 child.parent = element
                 if i > 0:
-                    child._predecessor = children[i - 1]
+                    child.predecessor = children[i - 1]
                 if i < len(children) - 1:
-                    child._successor = children[i + 1]
+                    child.successor = children[i + 1]
 
     return file_  # type: ignore
 

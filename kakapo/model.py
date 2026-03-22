@@ -1,41 +1,40 @@
 from __future__ import annotations
 from dataclasses import KW_ONLY, dataclass, field, fields
-from abc import ABC, abstractmethod
 from typing import Generator, Sequence, Any, Type
 
 
 @dataclass
-class Component(ABC):
+class Component:
     """Base class for all code elements."""
 
     _: KW_ONLY
-    parent: Composite | None = field(default=None, repr=False)
+    _parent: Composite | None = field(default=None, repr=False)
     _successor: Component | None = field(default=None, repr=False)
     _predecessor: Component | None = field(default=None, repr=False)
 
     @property
+    def parent(self) -> Composite | None:
+        return self._parent
+    
+    @parent.setter
+    def parent(self, parent: Composite | None):
+        self._parent = parent
+
+    @property
     def successor(self) -> Component | None:
         return self._successor
+    
+    @successor.setter
+    def successor(self, successor: Component | None):
+        self._successor = successor
 
     @property
     def predecessor(self) -> Component | None:
         return self._predecessor
 
-    def __iter__(self):
-        return iter(())
-
-    def iterate(self):
-        return iter(())
-
-    def iterate_with_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
-        raise NotImplementedError()
-
-    def __len__(self) -> int:
-        return 1
-
-    @abstractmethod
-    def __str__(self) -> str:
-        """Convert the code model to a code string."""
+    @predecessor.setter
+    def predecessor(self, predecessor: Component | None):
+        self._predecessor = predecessor
 
 
 @dataclass
@@ -72,18 +71,18 @@ class Missing(Component):
 @dataclass
 class Composite(Component):
 
-    _NON_CHILD_FIELDS = {"parent", "_successor", "_predecessor"}
+    _NON_CHILD_FIELDS = {"_parent", "_successor", "_predecessor"}
 
     def __iter__(self):
         for name in self.__dataclass_fields__:
             if name not in self._NON_CHILD_FIELDS:
                 yield getattr(self, name)
 
-    def iterate(self) -> Generator[Component]:
+    def descendants(self) -> Generator[Component]:
         for child in self:
             yield child
             if isinstance(child, Composite):
-                for grand_child in child.iterate():
+                for grand_child in child.descendants():
                     yield grand_child
 
     def __str__(self) -> str:
@@ -111,11 +110,11 @@ class Composite(Component):
                 return i
         raise ValueError("Child not found.")
 
-    def iterate_with_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
+    def descendants_and_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
         for child in self:
             yield child, level
             if isinstance(child, Composite):
-                for grand_child, grand_child_level in child.iterate_with_indent(level):
+                for grand_child, grand_child_level in child.descendants_and_indent(level):
                     yield grand_child, grand_child_level
 
     def pretty_string(
@@ -300,7 +299,7 @@ class Methods(Block):
 
 class If(Block):
 
-    def iterate_with_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
+    def descendants_and_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
         for i, child in enumerate(self):
             if i == 4:
                 level += 1
@@ -310,7 +309,7 @@ class If(Block):
                 level += -1
             yield child, level
             if isinstance(child, Composite):
-                for grand_child, grand_child_level in child.iterate_with_indent(level):
+                for grand_child, grand_child_level in child.descendants_and_indent(level):
                     yield grand_child, grand_child_level
             if isinstance(child, Literal) and child.value.startswith("else"):
                 level += 1

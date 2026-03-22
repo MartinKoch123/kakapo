@@ -9,7 +9,7 @@ INDENT = 4 * " "
 def format_type(type_: type[model.Component]):
     def decorator(func):
         def wrapper(code: model.Component):
-            for element in code.iterate():
+            for element in code.descendants():
                 if isinstance(element, type_):
                     func(element)
 
@@ -61,7 +61,7 @@ def remove_white_space_and_semicolon_after_if_condition(if_statement: model.If):
 
 
 def remove_white_space_and_semicolon_after_keyword(code: model.Component):
-    for element in code.iterate():
+    for element in code.descendants():
         match element:
             case model.Statement(
                 body=model.Literal(value="return" | "break" | "continue")
@@ -126,7 +126,7 @@ def ensure_empty_line_before_comment(code: model.Code):
 
 def normalize_indentation(component: model.Component):
 
-    for element, level in component.iterate_with_indent():
+    for element, level in component.descendants_and_indent():
 
         if (
             not isinstance(element, (model.Construct, model.Code)) 
@@ -159,12 +159,13 @@ def normalize_indentation(component: model.Component):
         indent = level * INDENT
 
         # Current element has a predecessor, i.e. its not the first element of its parent.
-        if element.predecessor or (parent is not None and parent.predecessor is not None):
+        if element.predecessor or (
+            parent is not None and parent.predecessor is not None
+        ):
             if element.predecessor:
                 modified_element = element.predecessor
             else:
                 modified_element = parent.predecessor
-
 
             # Predecessor should be whitespace.
             assert isinstance(modified_element, model.Literal)
@@ -185,11 +186,10 @@ def normalize_indentation(component: model.Component):
 
         elif parent is not None:
             raise NotImplementedError
-        
 
 
 def break_arguments(element: model.Component, max_line_length: int = 120):
-    for element, level in element.iterate_with_indent():
+    for element, level in element.descendants_and_indent():
 
         if not isinstance(element, model.Statement):
             continue
