@@ -100,7 +100,7 @@ def nothing(n: int = 1):
 
 def or_none(expr: ParserElement):
     """Parse expr or return None if not found."""
-    return Opt(expr, default=None)
+    return Opt(expr, default=model.Leaf(None))
 
 
 class ReservedKeyword(ParserElement):
@@ -215,7 +215,7 @@ class Block(ParserElement):
         end_element = (
             ws
             + Leaf("end")
-            + Opt(ows + Literal(";"), default=None).add_parse_action(
+            + Opt(ows + Literal(";"), default=model.Leaf(None)).add_parse_action(
                 lambda toks: ["", ""] if toks[0] is None else toks
             )
         )
@@ -425,7 +425,7 @@ function = Block(name="function", head=statement, content=code, end="optional")
 
 catch = (
     Literal("catch")
-    + Opt(White(" \t") + statement_core, default=None).add_parse_action(
+    + Opt(White(" \t") + statement_core, default=model.Leaf(None)).add_parse_action(
         lambda toks: ["", ""] if toks[0] is None else toks
     )
     + ws

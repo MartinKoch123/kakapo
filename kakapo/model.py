@@ -4,43 +4,39 @@ from abc import ABC, abstractmethod
 from typing import Generator, Sequence, Any, Type
 
 
+@dataclass
 class Component(ABC):
     """Base class for all code elements."""
 
     _: KW_ONLY
     parent: Composite | None = field(default=None, repr=False)
+    _successor: Component | None = field(default=None, repr=False)
+    _predecessor: Component | None = field(default=None, repr=False)
 
     @property
-    def successor(self) -> Any:
-        if self.parent is None:
-            raise ValueError("Component has no parent.")
-        own_index = self.parent.index_of_child(self)
-        successor_index = own_index + 1
-        if successor_index >= len(self.parent):
-            return None
-        return self.parent[successor_index]
+    def successor(self) -> Component | None:
+        return self._successor
+
+    # @property
+    # def predecessor_index(self) -> int | None:
+    #     if self.parent is None:
+    #         raise ValueError("Component has no parent.")
+    #     own_index = self.parent.index_of_child(self)
+    #     if own_index > 0:
+    #         return own_index - 1
 
     @property
-    def predecessor_index(self) -> int | None:
-        if self.parent is None:
-            raise ValueError("Component has no parent.")
-        own_index = self.parent.index_of_child(self)
-        if own_index > 0:
-            return own_index - 1
+    def predecessor(self) -> Component | None:
+        return self._predecessor
 
-    @property
-    def predecessor(self) -> Any:
-        if index := self.predecessor_index:
-            return self.parent[index]
-
-    @predecessor.setter
-    def predecessor(self, value):
-        if not isinstance(value, str):
-            raise NotImplementedError("Only string is supported.")
-        index = self.predecessor_index
-        if index is None:
-            raise ValueError("Component is first child of parent.")
-        self.parent[index] = value
+    # @predecessor.setter
+    # def predecessor(self, value):
+    #     if not isinstance(value, str):
+    #         raise NotImplementedError("Only string is supported.")
+    #     index = self.predecessor_index
+    #     if index is None:
+    #         raise ValueError("Component is first child of parent.")
+    #     self.parent[index] = value
 
     def __iter__(self):
         return iter(())
@@ -62,21 +58,23 @@ class Component(ABC):
 class Leaf(Component):
     """Component with no children."""
 
-    value: str
+    value: str | None
 
     def __str__(self) -> str:
         return str(self.value)
 
-    def __getitem__(self, item: int):
-        if item != 0:
-            raise IndexError("Leaf has only one component.")
-        return self.value
+    # def __getitem__(self, item: int):
+    #     if item != 0:
+    #         raise IndexError("Leaf has only one component.")
+    #     return self.value
 
     def __repr__(self):
         name = self.__class__.__name__
-        return f"{name}({self.value})"
+        return f"{name}({self.value!r})"
 
-    def __eq__(self, other) -> bool:
+    def __eq__(self, other: Leaf | str | None) -> bool:
+        if isinstance(other, (str | None)):
+            return self.value == other
         return self.value == other.value
 
     @classmethod
@@ -88,14 +86,20 @@ class Leaf(Component):
 @dataclass
 class Composite(Component):
 
+    NON_CHILD_FIELDS = {"parent", "_successor", "_predecessor"}
+
     def __post_init__(self):
         super().__init__()
-        for child in self:
-            if isinstance(child, Component):
-                child.parent = self
+        children = list(self)
+        for i, child in enumerate(children):
+            child.parent = self
+            if i > 0:
+                child._predecessor = children[i - 1]
+            if i < len(children) - 1:
+                child._successor = children[i + 1]
 
     def __iter__(self):
-        return (getattr(self, f.name) for f in fields(self))
+        return (getattr(self, f.name) for f in fields(self) if f.name not in self.NON_CHILD_FIELDS)
 
     def iterate(self) -> Generator[Component]:
         for child in self:
@@ -119,7 +123,7 @@ class Composite(Component):
     #     raise IndexError("Index out of range")
 
     def __len__(self) -> int:
-        return len(list(self))
+        return len(fields(self))
 
     def __repr__(self) -> str:
         name = self.__class__.__name__

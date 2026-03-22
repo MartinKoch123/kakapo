@@ -177,3 +177,7 @@ def test_ensure_empty_line_before_comment(input_: str, expected: str):
 def test_normalize_indentation(string: str, expected: str):
     actual = format(formatter.normalize_indentation, string)
     assert actual == expected
+
+
+if __name__ == "__main__":
+    pytest.main()

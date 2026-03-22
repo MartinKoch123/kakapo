@@ -121,14 +121,17 @@ def ensure_empty_line_before_comment(code: model.Code):
         code.children[i - 1] = "\n" + predecessor
 
 
-def normalize_indentation(element: model.Component):
+def normalize_indentation(component: model.Component):
 
-    for element, level in element.iterate_with_indent():
+    for element, level in component.iterate_with_indent():
 
-        if not isinstance(element, model.Construct) and (
-            not isinstance(element, model.Leaf)
-            or element.value not in ["end", "elseif", "else"]
-        ):
+        if (
+            not isinstance(element, (model.Construct, model.Code)) 
+            and (
+                not isinstance(element, model.Leaf)
+                or element not in ["end", "elseif", "else"]
+            )
+        ): # fmt: skip
             continue
         parent = element.parent
 
@@ -141,31 +144,45 @@ def normalize_indentation(element: model.Component):
         if element_is_block_head:
             continue
 
-        # Workaround for for elseif. #TODO refactor model.If
-        own_index = parent.index_of_child(element)
-        if (
-            own_index > 1
-            and isinstance(parent[own_index - 2], model.Leaf)
-            and parent[own_index - 2].value == "elseif"
-        ):
-            continue
+        # # Workaround for for elseif. #TODO refactor model.If
+        # own_index = parent.index_of_child(element)
+        # if (
+        #     own_index > 1
+        #     and isinstance(parent[own_index - 2], model.Leaf)
+        #     and parent[own_index - 2].value == "elseif"
+        # ):
+        #     continue
 
         indent = level * INDENT
 
-        if element.predecessor is not None:
-            assert type(element.predecessor) is str
-            new: str = element.predecessor.rstrip(" ")
-            if not new.endswith("\n"):
-                new += "\n"
+        # Current element has a predecessor, i.e. its not the first element of its parent.
+        if element.predecessor or (parent is not None and parent.predecessor is not None):
+            if element.predecessor:
+                modified_element = element.predecessor
+            else:
+                modified_element = parent.predecessor
 
-            element.predecessor = new + indent
 
-        elif parent is not None and parent.predecessor is not None:
-            assert type(parent.predecessor) is str
-            new: str = parent.predecessor.rstrip(" ")
-            if not new.endswith("\n"):
-                new += "\n"
-            parent.predecessor = new + indent
+            # Predecessor should be whitespace.
+            assert isinstance(modified_element, model.Leaf)
+            whitespace = modified_element.value
+            assert whitespace is not None and whitespace.isspace() or whitespace == ""
+
+            # Remove current indentation (to be added later).
+            whitespace = whitespace.rstrip(" ")
+
+            # Ensure there is a newline at the end of the whitespace, so that the current element is on a new line.
+            if modified_element.predecessor and not whitespace.endswith("\n"):
+                whitespace += "\n"
+
+            # Add normalized indentation.
+            whitespace = whitespace + indent
+
+            modified_element.value = whitespace
+
+        elif parent is not None:
+            raise NotImplementedError
+        
 
 
 def break_arguments(element: model.Component, max_line_length: int = 120):
