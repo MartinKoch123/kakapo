@@ -15,6 +15,7 @@ Todo:
 
 from typing import Sequence
 from pathlib import Path
+import itertools
 
 from pyparsing import (
     Char,
@@ -290,7 +291,7 @@ identifier = (
 ) # fmt: skip
 
 """A comment. Starts at the comment marker '%' end ends before the next line break."""
-comment = Leaf("%") + rest_of_line
+comment = Leaf("%") + rest_of_line.add_parse_action(model.Leaf.from_tokens)
 
 
 construct_delimiter = Combine(
@@ -528,6 +529,7 @@ parse_actions = {
     ws: model.Leaf,
     element_delimiter: model.Leaf,
     construct_delimiter: model.Leaf,
+    string: model.Leaf
 }
 
 for parser_element, target_class in parse_actions.items():
@@ -538,8 +540,8 @@ def parse_string(s: str) -> model.File:
     """Parse a MATLAB code string and return its representation model."""
     parse_result = file.parse_string(s, parse_all=True)
 
-    file_ = parse_result[0]
-    for element in file_.iterate():
+    file_: model.File = parse_result[0]
+    for element in itertools.chain([file_], file_.iterate()):
         if isinstance(element, model.Composite):
             children = list(element)
             for i, child in enumerate(children):

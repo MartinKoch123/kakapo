@@ -78,7 +78,7 @@ def remove_white_space_before_semicolon(statement: model.Statement):
 @format_type(model.Function)
 def ensure_function_end(function: model.Function):
     """Ensure function block ends with 'end' keyword."""
-    if function.whitespace_before_end == "":
+    if function.whitespace_before_end in ("", None):
         function.whitespace_before_end = "\n"
     function.end_keyword = "end"
 
@@ -93,32 +93,35 @@ def normalize_leading_whitespace(file: model.File):
     file.leading_whitespace = ""
 
 
-def ensure_comment_leading_space(element: model.Component):
+@format_type(model.Comment)
+def ensure_comment_leading_space(comment: model.Comment):
     """Ensure there is a single space after the comment marker if the comment is not empty."""
-    for element in element.iterate():
-        match element:
-            case model.Comment(content=c) if c and not c.startswith(" "):
-                element.content = " " + c
+    if not comment.content.value.startswith(" "):
+        comment.content = " " + comment.content.value
 
 
 @format_type(model.Code)
 def ensure_empty_line_before_comment(code: model.Code):
     """Ensures an empty line before each block of comments."""
     for i, child in enumerate(code.children):
-        if i < 2:
+
+        # If child has no predecessor, it is the first element of the code and does not need an empty line before it.
+        if child.predecessor is None:
             continue
+        if child.predecessor.predecessor is None:
+            continue
+
         if not isinstance(child, model.Comment):
             continue
-        predecessor = code.children[i - 1]
-        prepredecessor = code.children[i - 2]
-        if isinstance(prepredecessor, model.Comment):
+        if isinstance(child.predecessor.predecessor, model.Comment):
             continue
-        assert type(predecessor) is str
+
+        assert type(child.predecessor) is model.Leaf
 
         # Inline comment, or already has an empty line before it.
-        if predecessor.count("\n") != 1:
+        if child.predecessor.value.count("\n") != 1:
             continue
-        code.children[i - 1] = "\n" + predecessor
+        code.children[i - 1] = "\n" + child.predecessor.value
 
 
 def normalize_indentation(component: model.Component):
