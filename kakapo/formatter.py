@@ -30,7 +30,7 @@ def normalize_whitespace_in_arguments_list(elements_list: model.ElementsList):
         string += " "  # Add single space after delimiter.
         if isinstance(elements_list, model.Operation):
             string = " " + string
-        elements_list.elements_list.children[i] = model.Leaf(string)
+        elements_list.elements_list.children[i] = model.Literal(string)
 
 
 @format_type(model.Parenthesized)
@@ -64,7 +64,7 @@ def remove_white_space_and_semicolon_after_keyword(code: model.Component):
     for element in code.iterate():
         match element:
             case model.Statement(
-                body=model.Leaf(value="return" | "break" | "continue")
+                body=model.Literal(value="return" | "break" | "continue")
             ):
                 element.whitespace_before_semicolon = ""
                 element.semicolon = ""
@@ -78,7 +78,7 @@ def remove_white_space_before_semicolon(statement: model.Statement):
 @format_type(model.Function)
 def ensure_function_end(function: model.Function):
     """Ensure function block ends with 'end' keyword."""
-    if function.whitespace_before_end in ("", None):
+    if function.whitespace_before_end == "":
         function.whitespace_before_end = "\n"
     function.end_keyword = "end"
 
@@ -116,7 +116,7 @@ def ensure_empty_line_before_comment(code: model.Code):
         if isinstance(child.predecessor.predecessor, model.Comment):
             continue
 
-        assert type(child.predecessor) is model.Leaf
+        assert type(child.predecessor) is model.Literal
 
         # Inline comment, or already has an empty line before it.
         if child.predecessor.value.count("\n") != 1:
@@ -131,7 +131,7 @@ def normalize_indentation(component: model.Component):
         if (
             not isinstance(element, (model.Construct, model.Code)) 
             and (
-                not isinstance(element, model.Leaf)
+                not isinstance(element, model.Literal)
                 or element not in ["end", "elseif", "else"]
             )
         ): # fmt: skip
@@ -167,9 +167,9 @@ def normalize_indentation(component: model.Component):
 
 
             # Predecessor should be whitespace.
-            assert isinstance(modified_element, model.Leaf)
+            assert isinstance(modified_element, model.Literal)
             whitespace = modified_element.value
-            assert whitespace is not None and whitespace.isspace() or whitespace == ""
+            assert whitespace.isspace() or whitespace == ""
 
             # Remove current indentation (to be added later).
             whitespace = whitespace.rstrip(" ")
@@ -206,7 +206,7 @@ def break_arguments(element: model.Component, max_line_length: int = 120):
             continue
 
         args_list = body.arguments_list
-        if args_list is None:
+        if isinstance(args_list, model.Missing):
             continue
 
         args_list[1][1] = " ...\n" + inner_indent

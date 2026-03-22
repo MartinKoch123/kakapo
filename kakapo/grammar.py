@@ -34,7 +34,6 @@ from pyparsing import (
     QuotedString,
     Regex,
     rest_of_line,
-    ungroup,
     White,
     Word,
     ZeroOrMore,
@@ -98,13 +97,17 @@ ParserElement.set_default_whitespace_chars("")
 
 def nothing(n: int = 1):
     return Empty().set_parse_action(
-        lambda s, loc, toks: [model.Leaf(None) for i in range(n)]
+        lambda s, loc, toks: [model.Missing() for i in range(n)]
     )
 
 
+def empty_string():
+    return Empty().set_parse_action(lambda s, loc, toks: model.Literal(""))
+
+
 def or_none(expr: ParserElement):
-    """Parse expr or return None if not found."""
-    return Opt(expr, default=model.Leaf(None))
+    """Parse expr or return Missing if not found."""
+    return Opt(expr, default=model.Missing())
 
 
 class ReservedKeyword(ParserElement):
@@ -130,14 +133,14 @@ ws = Combine(
 ).parse_with_tabs() # fmt: skip
 
 """Optional white space"""
-ows = Opt(ws, default=model.Leaf("")).parse_with_tabs()
+ows = Opt(ws, default=model.Literal("")).parse_with_tabs()
 
 element_delimiter = Combine(
     (White(" \t") | (Literal("...") + Regex(r"[ \t]*\n?[ \t]*")))[1, ...]
 ).parse_with_tabs()
 
 optional_element_delimiter = Opt(
-    element_delimiter, default=model.Leaf("")
+    element_delimiter, default=model.Literal("")
 ).parse_with_tabs()
 
 operator = Or(OPERATORS)
@@ -153,7 +156,7 @@ class Leaf(ParserElement):
     def parseImpl(self, instring, loc, doActions=True):
         loc, tokens = self.parser._parse(instring, loc, doActions)
         assert len(tokens) == 1
-        return loc, model.Leaf(tokens[0])
+        return loc, model.Literal(tokens[0])
 
     def _generateDefaultName(self) -> str:
         return "Leaf"
@@ -181,7 +184,7 @@ class DelimitedList(ParserElement):
         if delimiter_is_optional:
             delimiter = delimiter | ws
         delimiter.add_parse_action(
-            lambda s, loc, toks: model.Leaf("".join(str(t) for t in toks))
+            lambda s, loc, toks: model.Literal("".join(str(t) for t in toks))
         )
         min_sub_exp = max(min_elements - 1, 0)
         self.parser = (
@@ -226,9 +229,9 @@ class Block(ParserElement):
         )
         if isinstance(end, str):
             assert end == "optional"
-            end_element |= nothing(4)
+            end_element |= (empty_string() + nothing() + empty_string() + nothing())
         elif not end:
-            end_element = nothing(4)
+            end_element = (empty_string() + nothing() + empty_string() + nothing())
 
         self.parser = (
             Leaf(name)
@@ -291,7 +294,7 @@ identifier = (
 ) # fmt: skip
 
 """A comment. Starts at the comment marker '%' end ends before the next line break."""
-comment = Leaf("%") + rest_of_line.add_parse_action(model.Leaf.from_tokens)
+comment = Leaf("%") + rest_of_line.add_parse_action(model.Literal.from_tokens)
 
 
 construct_delimiter = Combine(
@@ -340,7 +343,7 @@ output_statement = Forward()
 argument_brackets = (("(", ")"), ("{", "}"))
 argument = output_statement | expression | Leaf(":")
 arguments_list = (
-    Opt(Leaf("."), default=model.Leaf(None))
+    or_none(Leaf("."))
     + parenthesized(
         DelimitedList(argument, delimiter=",", min_elements=0), 
         brackets=argument_brackets,
@@ -358,7 +361,8 @@ Examples:
 """
 anonymous_function = Leaf("@") + ows + or_none(arguments_list) + ows + expression
 
-number = common.number.set_parse_action(model.Leaf.from_tokens)
+# number = common.number.set_parse_action(model.Literal.from_tokens)
+number = Regex(r"[-+\d][\d.eE]*").set_parse_action(model.Literal.from_tokens)
 
 operand_atom = Forward()
 operation = Forward()
@@ -393,8 +397,8 @@ keyword = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 
 statement_core = (
     (expression | keyword)
-    + Opt(ows + FollowedBy(Leaf(";")), default=model.Leaf(None))
-    + Opt(Leaf(";"), default=model.Leaf(None))
+    + Opt(ows + FollowedBy(Leaf(";")), default=model.Missing())
+    + Opt(Leaf(";"), default=model.Missing())
 )
 
 no_output_statement = nothing(1) + statement_core
@@ -431,7 +435,7 @@ function = Block(name="function", head=statement, content=code, end="optional")
 
 catch = (
     Leaf("catch")
-    + Opt(White(" \t") + statement_core, default=model.Leaf(None)).add_parse_action(
+    + Opt(White(" \t") + statement_core, default=model.Missing()).add_parse_action(
         lambda toks: ["", ""] if toks[0] is None else toks
     )
     + ws
@@ -524,12 +528,12 @@ parse_actions = {
     classdef: model.Classdef,
     methods: model.Methods,
     properties: model.Properties,
-    command_identifier: model.Leaf,
-    identifier: model.Leaf,
-    ws: model.Leaf,
-    element_delimiter: model.Leaf,
-    construct_delimiter: model.Leaf,
-    string: model.Leaf
+    command_identifier: model.Literal,
+    identifier: model.Literal,
+    ws: model.Literal,
+    element_delimiter: model.Literal,
+    construct_delimiter: model.Literal,
+    string: model.Literal
 }
 
 for parser_element, target_class in parse_actions.items():

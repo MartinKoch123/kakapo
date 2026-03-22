@@ -39,22 +39,20 @@ class Component(ABC):
 
 
 @dataclass
-class Leaf(Component):
+class Literal(Component):
     """Component with no children."""
 
-    value: str | None
+    value: str
 
     def __str__(self) -> str:
-        if self.value is None:
-            return ""
-        return str(self.value)
+        return self.value
 
     def __repr__(self):
         name = self.__class__.__name__
         return f"{name}({self.value!r})"
 
-    def __eq__(self, other: Leaf | str | None) -> bool:
-        if isinstance(other, (str | None)):
+    def __eq__(self, other: Literal | str) -> bool:
+        if isinstance(other, str):
             return self.value == other
         return self.value == other.value
 
@@ -62,7 +60,14 @@ class Leaf(Component):
     def from_tokens(cls, tokens: Sequence):
         assert len(tokens) == 1
         return cls(tokens[0])
+    
 
+@dataclass
+class Missing(Component):
+    
+    def __str__(self) -> str:
+        return ""
+    
 
 @dataclass
 class Composite(Component):
@@ -82,7 +87,7 @@ class Composite(Component):
                     yield grand_child
 
     def __str__(self) -> str:
-        strings = [str(child) for child in self if child is not None]
+        strings = [str(child) for child in self]
         return "".join(strings)
 
     def __len__(self) -> int:
@@ -194,12 +199,12 @@ class OutputArguments(Composite):
 
 @dataclass
 class Call(Composite):
-    identifer: Leaf
-    arguments_list: ArgumentsList | None
+    identifer: Literal
+    arguments_list: ArgumentsList | Missing
 
     @property
     def arguments(self) -> Sequence:
-        if self.arguments_list is None:
+        if isinstance(self.arguments_list, Missing):
             return tuple()
         return self.arguments_list.elements
 
@@ -226,7 +231,7 @@ class Parenthesized(Composite):
 
 @dataclass
 class Statement(Composite, Construct):
-    output_arguments: OutputArguments | None
+    output_arguments: OutputArguments | Missing
     body: Component
     whitespace_before_semicolon: str
     semicolon: str
@@ -299,7 +304,7 @@ class If(Block):
         for i, child in enumerate(self):
             if i == 4:
                 level += 1
-            if isinstance(child, Leaf) and child.value.startswith("else"):
+            if isinstance(child, Literal) and child.value.startswith("else"):
                 level -= 1
             if i == len(self) - 3:
                 level += -1
@@ -307,7 +312,7 @@ class If(Block):
             if isinstance(child, Composite):
                 for grand_child, grand_child_level in child.iterate_with_indent(level):
                     yield grand_child, grand_child_level
-            if isinstance(child, Leaf) and child.value.startswith("else"):
+            if isinstance(child, Literal) and child.value.startswith("else"):
                 level += 1
 
 
@@ -361,12 +366,12 @@ class Array(ElementsList):
     # stuff: Any
 
     @property
-    def elements_list(self) -> DelimitedList:
+    def elements_list(self) -> DelimitedList | Missing:
         return self.parenthesized.content
 
     @property
     def elements(self) -> list:
-        return self.elements_list.elements if self.elements_list is not None else None
+        return self.elements_list.elements if not isinstance(self.elements_list, Missing) else Missing()
 
 
 @dataclass

@@ -17,7 +17,7 @@ def assert_parsing_returns_unmodified_string(element: pp.ParserElement, string: 
 @pytest.mark.parametrize("string", [" ", "\t", "\n", "\t\n"])
 def test_white_space(string):
     actual = grammar.ws.parse_string(string)[0]
-    assert actual == model.Leaf(string)
+    assert actual == model.Literal(string)
 
 
 @pytest.mark.parametrize("string", ["", "abc"])
@@ -28,7 +28,7 @@ def test_white_space_error(string):
 @pytest.mark.parametrize("string", ["", " \t\n"])
 def test_optional_white_space(string):
     actual = grammar.ows.parse_string(string)[0]
-    assert actual == model.Leaf(string)
+    assert actual == model.Literal(string)
 
 
 @pytest.mark.parametrize("string", ["a", ".", "  b"])
@@ -39,7 +39,7 @@ def test_optional_white_space_error(string):
 @pytest.mark.parametrize("string", ("var", "x", "TEST", "x_123", "a" * 63))
 def test_identifier(string):
     actual = grammar.identifier.parse_string(string)[0]
-    expected = model.Leaf(string)
+    expected = model.Literal(string)
     assert actual == expected
 
 
@@ -56,7 +56,7 @@ def test_identifier(string):
 )
 def test_element_delimiter(string):
     actual = grammar.element_delimiter.parse_string(string)[0]
-    expected = model.Leaf(string)
+    expected = model.Literal(string)
     assert actual == expected
 
 
@@ -101,14 +101,14 @@ def test_identifier_error(string):
 @pytest.mark.parametrize(
     "string, expected",
     [
-        ("import abc", model.Command([model.Leaf(s) for s in ["import", " ", "abc"]])),
+        ("import abc", model.Command([model.Literal(s) for s in ["import", " ", "abc"]])),
         (
             "import ab.cd.ef",
-            model.Command([model.Leaf(s) for s in ["import", " ", "ab.cd.ef"]]),
+            model.Command([model.Literal(s) for s in ["import", " ", "ab.cd.ef"]]),
         ),
         (
             "import a.b.*",
-            model.Command([model.Leaf(s) for s in ["import", " ", "a.b.*"]]),
+            model.Command([model.Literal(s) for s in ["import", " ", "a.b.*"]]),
         ),
     ],
 )
@@ -137,10 +137,10 @@ def test_array_delimiter(string):
 @pytest.mark.parametrize(
     "string, expected",
     [
-        ("clear", model.Command([model.Leaf("clear")])),
+        ("clear", model.Command([model.Literal("clear")])),
         (
             "clear a123 b_",
-            model.Command([model.Leaf(s) for s in ["clear", " ", "a123", " ", "b_"]]),
+            model.Command([model.Literal(s) for s in ["clear", " ", "a123", " ", "b_"]]),
         ),
         # ("command -flag arg", model.Command(["command", " ", "-flag", " ", "arg"]))
     ],
@@ -168,18 +168,18 @@ def test_command_error(string):
         (
             "a",
             grammar.DelimitedList(grammar.identifier, delimiter=","),
-            model.DelimitedList([model.Leaf("a")]),
+            model.DelimitedList([model.Literal("a")]),
         ),
         (
             "a\n, b",
             grammar.DelimitedList(grammar.identifier, delimiter=","),
-            model.DelimitedList([model.Leaf(s) for s in ["a", "\n, ", "b"]]),
+            model.DelimitedList([model.Literal(s) for s in ["a", "\n, ", "b"]]),
         ),
         (
             "a ;; b   ;;c",
             grammar.DelimitedList(grammar.identifier, delimiter=";;"),
             model.DelimitedList(
-                [model.Leaf(s) for s in ["a", " ;; ", "b", "   ;;", "c"]]
+                [model.Literal(s) for s in ["a", " ;; ", "b", "   ;;", "c"]]
             ),
         ),
     ),
