@@ -136,7 +136,10 @@ ws = Combine(
 ows = Opt(ws, default=model.Literal("")).parse_with_tabs()
 
 element_delimiter = Combine(
-    (White(" \t") | (Literal("...") + Regex(r"[ \t]*\n?[ \t]*")))[1, ...]
+    (
+        White(" \t") 
+        | (Literal("...") + Regex(r"[ \t]*\n?[ \t]*"))
+    )[1, ...]
 ).parse_with_tabs()
 
 optional_element_delimiter = Opt(
@@ -215,25 +218,29 @@ class Block(ParserElement):
         head: ParserElement | None = None,
         end: bool | str = True,
     ):
-        # Make sure content and head are parsed as a single token.
-
         super().__init__()
 
         head = head if head else nothing()
 
-        end_element = ws + Leaf("end") + ows + or_none(Leaf(";"))
+        end_placeholder = empty_string() + nothing() + empty_string() + nothing()
+
+        end_element = ows + Leaf("end") + ows + or_none(Leaf(";"))
         if isinstance(end, str):
             assert end == "optional"
-            end_element |= empty_string() + nothing() + empty_string() + nothing()
+            end_element |= end_placeholder
         elif not end:
-            end_element = empty_string() + nothing() + empty_string() + nothing()
+            end_element = end_placeholder
 
         self.parser = (
             Leaf(name)
-            + optional_element_delimiter
-            + head
-            + construct_delimiter
-            + content
+            + (
+                (optional_element_delimiter + head)
+                | nothing(2)
+            )
+            + (
+                (construct_delimiter + content)
+                | nothing(2)
+            )
             + end_element
         )
 

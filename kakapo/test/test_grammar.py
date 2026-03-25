@@ -277,5 +277,72 @@ def test_function(string):
     assert expected == string
 
 
+@pytest.mark.parametrize(
+    "string",
+    (
+        # "",
+    )
+)
+def test_arguments_list(string):
+    model = grammar.arguments_list.parse_string(string)[0]
+    expected = str(model)
+    assert expected == string
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "",
+        "a",
+        "a;b",
+    ),
+)
+def test_code(string):
+    model = grammar.code.parse_string(string)[0]
+    expected = str(model)
+    assert expected == string
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "if true\n end",
+        "if true\n a = 1 end",
+    ),
+)
+def test_if(string):
+    model = grammar.if_block.parse_string(string)[0]
+    expected = str(model)
+    assert expected == string
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "properties end",
+        "properties\n end",
+        "properties\n a;b end",
+        "properties\n a\nb\nend",
+    ),
+)
+def test_properties(string):
+    model = grammar.properties.parse_string(string)[0]
+    expected = str(model)
+    assert expected == string
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        # "classdef A end",
+        "classdef A\n properties a end end",
+    )
+)
+def test_classdef(string):
+    model = grammar.classdef.parse_string(string)[0]
+    expected = str(model)
+    assert expected == string
+
+
 if __name__ == "__main__":
     pytest.main()
