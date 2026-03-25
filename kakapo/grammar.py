@@ -563,5 +563,5 @@ def parse_string(s: str) -> model.File:
 
 def parse_file(file_path: Path | str) -> model.File:
     """Parse a MATLAB .m file and return its representation model."""
-    parse_result = file.parse_file(str(file_path), parse_all=True)
-    return parse_result[0]  # type: ignore
+    string = Path(file_path).read_text()
+    return parse_string(string)
