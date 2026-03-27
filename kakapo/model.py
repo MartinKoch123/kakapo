@@ -227,8 +227,6 @@ class Parenthesized(Composite):
 class Statement(Composite, Construct):
     output_arguments: OutputArguments | Missing
     body: Component
-    whitespace_before_semicolon: Literal
-    semicolon: Literal | Missing
 
 
 @dataclass(eq=False)
@@ -272,8 +270,13 @@ class Block(Composite, Construct):
     body: Component
     whitespace_before_end: Literal
     end_keyword: Literal | Missing
+
+
+@dataclass
+class ConstructDelimiter(Composite):
     whitespace_before_semicolon: Literal
-    semicolon: Literal | Missing
+    semicolon: Literal
+    whitespace_after_semicolon: Literal
 
 
 class Function(Block):

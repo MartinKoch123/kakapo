@@ -146,7 +146,7 @@ def test_array_delimiter(string):
     ],
 )
 def test_command(string, expected):
-    actual = grammar.parse_string(string).code[0]
+    actual = grammar.command.parse_string(string)[0]
     assert actual == expected
 
 
@@ -267,7 +267,7 @@ def test_array(string):
 @pytest.mark.parametrize(
     "string",
     (
-        "function func()\ndisp('hello')\nend ;",
+        "function func()\ndisp('hello')\nend",
         "function func()\ndisp('hello')",
     ),
 )
@@ -292,13 +292,29 @@ def test_arguments_list(string):
 @pytest.mark.parametrize(
     "string",
     (
+        ";",
+        " ;\n",
+        "\n",
+    )
+)
+def test_construct_delimiter(string):
+    model = grammar.construct_delimiter.parse_string(string)[0]
+    expected = str(model)
+    assert expected == string
+
+@pytest.mark.parametrize(
+    "string",
+    (
         "",
         "a",
         "a;b",
+        "a % comment",
+        "a% comment",
+        "a = 1\nb(2) % comment",
     ),
 )
 def test_code(string):
-    model = grammar.code.parse_string(string)[0]
+    model = grammar.code.parse_string(string, parse_all=True)[0]
     expected = str(model)
     assert expected == string
 
@@ -334,8 +350,8 @@ def test_properties(string):
 @pytest.mark.parametrize(
     "string",
     (
-        # "classdef A end",
-        "classdef A\n properties a end end",
+        "classdef A end",
+        "classdef A \n properties \n a \n end \n end",
     )
 )
 def test_classdef(string):

@@ -33,6 +33,7 @@ from pyparsing import (
     PrecededBy,
     QuotedString,
     Regex,
+    StringEnd,
     rest_of_line,
     White,
     Word,
@@ -101,13 +102,21 @@ def nothing(n: int = 1):
     )
 
 
-def empty_string():
-    return Empty().set_parse_action(lambda s, loc, toks: model.Literal(""))
+def empty_string(n: int = 1):
+    return Empty().set_parse_action(lambda s, loc, toks: [model.Literal("") for i in range(n)])
 
 
 def or_none(expr: ParserElement):
     """Parse expr or return Missing if not found."""
     return Opt(expr, default=model.Missing())
+
+def or_empty(expr: ParserElement):
+    """Parse expr or return an empty Literal if not found."""
+    return Opt(expr, default=model.Literal(""))
+
+
+def join_strings(s, loc, toks):
+    return model.Literal("".join(str(t) for t in toks))
 
 
 class ReservedKeyword(ParserElement):
@@ -222,9 +231,9 @@ class Block(ParserElement):
 
         head = head if head else nothing()
 
-        end_placeholder = empty_string() + nothing() + empty_string() + nothing()
+        end_placeholder = empty_string() + nothing()
 
-        end_element = ows + Leaf("end") + ows + or_none(Leaf(";"))
+        end_element = ows + Leaf("end")
         if isinstance(end, str):
             assert end == "optional"
             end_element |= end_placeholder
@@ -252,7 +261,7 @@ class Block(ParserElement):
 
 
 def ows_delimited_list(expr: ParserElement, allow_empty: bool = False) -> ParserElement:
-    result = ZeroOrMore(expr + construct_delimiter + FollowedBy(expr)) + expr
+    result = expr + ZeroOrMore(construct_delimiter + expr)
     if allow_empty:
         result = result | empty
     return result
@@ -307,11 +316,11 @@ identifier = (
 comment = Leaf("%") + rest_of_line.add_parse_action(model.Literal.from_tokens)
 
 
-construct_delimiter = Combine(
-    (PrecededBy(";") + Word(" \t\n"))
-    | Opt(Word(" \t"), default="") + Char("\n") + Opt(Word(" \t\n"), default="")
-    | Opt(Word(" \t"), default="") + FollowedBy(comment)
-    | line_end
+construct_delimiter = (
+    ows + Literal(";") + ows
+    | Regex(r"[ \t]*\n") + empty_string() + ows
+    | Regex(r"[ \t]*") + empty_string() + ows + FollowedBy(Literal("%"))
+    # | line_end
 )
 
 
@@ -405,11 +414,7 @@ keyword = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 
 """An assignment or an expression with either no result or an unused result."""
 
-statement_core = (
-    (expression | keyword)
-    + Opt(ows + FollowedBy(Leaf(";")), default=model.Missing())
-    + Opt(Leaf(";"), default=model.Missing())
-)
+statement_core = expression | keyword
 
 no_output_statement = nothing(1) + statement_core
 output_statement << (output_arguments + statement_core)
@@ -487,9 +492,9 @@ methods = Block(
 
 command_identifier = Combine(identifier + Opt(".*"))
 command = (
-    ZeroOrMore(command_identifier + element_delimiter + FollowedBy(command_identifier))
-    + command_identifier
-    + FollowedBy(construct_delimiter)
+    command_identifier 
+    + ZeroOrMore(element_delimiter + command_identifier)
+    + (StringEnd() | FollowedBy(construct_delimiter))
 )
 
 any_block = (
@@ -542,7 +547,7 @@ parse_actions = {
     identifier: model.Literal,
     ws: model.Literal,
     element_delimiter: model.Literal,
-    construct_delimiter: model.Literal,
+    construct_delimiter: model.ConstructDelimiter,
     string: model.Literal,
 }
 
