@@ -469,7 +469,7 @@ switch_otherwise = Block(name="otherwise", content=code, end=False)
 switch = Block(
     name="switch",
     head=no_output_statement,
-    content=ows_delimited_list(switch_case | switch_otherwise, allow_empty=True),
+    content=code
 )
 
 classdef = Block(
@@ -507,6 +507,8 @@ any_block = (
     | classdef
     | methods
     | properties
+    | switch_case
+    | switch_otherwise
 )
 
 code << ows_delimited_list(command | statement | comment | any_block, allow_empty=True)

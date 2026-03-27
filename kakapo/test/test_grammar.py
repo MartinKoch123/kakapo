@@ -277,16 +277,16 @@ def test_function(string):
     assert expected == string
 
 
-@pytest.mark.parametrize(
-    "string",
-    (
-        # "",
-    )
-)
-def test_arguments_list(string):
-    model = grammar.arguments_list.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
+# @pytest.mark.parametrize(
+#     "string",
+#     (
+#         "",
+#     )
+# )
+# def test_arguments_list(string):
+#     model = grammar.arguments_list.parse_string(string)[0]
+#     expected = str(model)
+#     assert expected == string
 
 
 @pytest.mark.parametrize(
@@ -346,18 +346,44 @@ def test_properties(string):
     expected = str(model)
     assert expected == string
 
+@pytest.mark.parametrize(
+    "string",
+    (
+        "methods \n end",
+        "methods \n function a() \n end \n end",
+    )
+)
+def test_methods(string):
+    model = grammar.methods.parse_string(string)[0]
+    expected = str(model)
+    assert expected == string
+
 
 @pytest.mark.parametrize(
     "string",
     (
         "classdef A end",
         "classdef A \n properties \n a \n end \n end",
+        "classdef A \n methods \n a \n end \n end",
     )
 )
 def test_classdef(string):
     model = grammar.classdef.parse_string(string)[0]
     expected = str(model)
     assert expected == string
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "switch x\n end",
+        "switch x\n case 1\n otherwise \n b \n end",
+    )
+)
+def test_switch(string):
+    model = grammar.switch.parse_string(string)[0]
+    expected = str(model)
+    assert expected == string
+
 
 
 if __name__ == "__main__":
