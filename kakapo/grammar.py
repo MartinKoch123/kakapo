@@ -4,10 +4,6 @@ Parsing logic for MATLAB code.
 Terminology:
  - Block: Code delimited by a block keyword and the 'end' keyword, e.g. function, if, for.
  - Construct: Unit of code which can stand on its own, e.g. statements, blocks, comments.
-
-Todo:
- - Support all format of command arguments.
-
 """
 
 # pyright: reportUnusedExpression=false
@@ -199,8 +195,7 @@ class Block(ParserElement):
             else:
                 head_parser = element_delimiter + head
 
-        content_parser = ((construct_delimiter + content) | nothing(2))
-
+        content_parser = (construct_delimiter + content) | nothing(2)
 
         self.parser = (
             Leaf(name)
@@ -416,9 +411,9 @@ expression << (operation | operand)
 
 keyword = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 
-"""An assignment or an expression with either no result or an unused result."""
 
 statement_core = expression | keyword
+"""An assignment or an expression with either no result or an unused result."""
 
 no_output_statement = nothing(1) + statement_core
 output_statement << (output_arguments + statement_core)
@@ -426,44 +421,62 @@ statement = output_statement | no_output_statement
 
 code = Forward()
 
-elseif_block_part = Leaf("elseif") + ws + no_output_statement + ws + code
-
-else_block_part = Leaf("else") + ws + code
-
-"""If block including possible "elseif" and "else" subblocks."""
-if_block = Block(
+if_ = Block(
     name="if",
     head=no_output_statement,
-    content=(code + ZeroOrMore(ws + elseif_block_part) + Opt(ws + else_block_part)),
+    content=code,
     end=True,
 )
 
-"""For-loop code block."""
+else_ = Block(name="else", content=code, end=False)  # End belongs to if-block.
+
+else_if = Block(
+    name="elseif",
+    head=no_output_statement,
+    content=code,
+    end=False,  # End belongs to if-block.
+)
+
+
 for_ = Block(
     name="for",
     head=output_statement,
     content=code,
     end=True,
 )
+"""For-loop code block."""
 
-"""While-loop code block."""
+
 while_ = Block(name="while", head=no_output_statement, content=code)
+"""While-loop code block."""
 
-"""Function definition block."""
+
 function = Block(name="function", head=statement, content=code, end="optional")
+"""Function definition block."""
 
-catch = Block(name="catch", content=code, end=False)
+
+catch = Block(
+    name="catch",
+    head=identifier,
+    optional_head=True,
+    content=code,
+    end=False,
+)
+"""'catch'-block of a try-catch block."""
+
 
 try_ = Block(name="try", content=code)
 
-"""'case'-block within a switch statement."""
 switch_case = Block(name="case", head=no_output_statement, content=code, end=False)
+"""'case'-block of a switch statement."""
 
-"""'otherwise'-block within a switch statement."""
+
 switch_otherwise = Block(name="otherwise", content=code, end=False)
+"""'otherwise'-block of a switch statement."""
 
-"""Switch statement code block"""
+
 switch = Block(name="switch", head=no_output_statement, content=code)
+"""Switch statement code block"""
 
 classdef = Block(
     name="classdef",
@@ -494,7 +507,9 @@ command = (
 any_block = (
     catch
     | classdef
-    | if_block
+    | else_
+    | else_if
+    | if_
     | for_
     | function
     | methods
@@ -528,11 +543,13 @@ parse_actions = {
     comment: model.Comment,
     construct_delimiter: model.ConstructDelimiter,
     element_delimiter: model.Literal,
+    else_: model.Else,
+    else_if: model.ElseIf,
     file: model.File,
     for_: model.ForLoop,
     function: model.Function,
     identifier: model.Literal,
-    if_block: model.If,
+    if_: model.If,
     methods: model.Methods,
     no_output_statement: model.Statement,
     operation: model.Operation,

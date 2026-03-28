@@ -321,12 +321,36 @@ def test_code(string):
 @pytest.mark.parametrize(
     "string",
     (
+        "else",
+        "else \n a = 1"
+    ),
+)
+def test_else(string):
+    model = grammar.else_.parse_string(string)[0]
+    assert str(model) == string
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "elseif true",
+        "elseif 1 == 2 \n a = 1",
+    ),
+)
+def test_else_if(string):
+    model = grammar.else_if.parse_string(string)[0]
+    assert str(model) == string
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
         "if true\n end",
         "if true\n a = 1 end",
     ),
 )
 def test_if(string):
-    model = grammar.if_block.parse_string(string)[0]
+    model = grammar.if_.parse_string(string)[0]
     expected = str(model)
     assert expected == string
 
@@ -389,7 +413,7 @@ def test_switch(string):
     (
         "catch",
         "catch \n a = 1",
-        "catch \n a = 1",
+        "catch exc \n a = 1",
     )
 )
 def test_catch(string):

@@ -374,7 +374,6 @@ class Array(ElementsList):
         return self.elements_list.elements if not isinstance(self.elements_list, Missing) else Missing()
 
 
-@dataclass
 class SingleElementOperation(Composite):
     pass
 
@@ -384,8 +383,15 @@ class Command(VariableLengthComposite, Construct):
     pass
 
 
-@dataclass
 class Classdef(Block):
+    pass
+
+
+class Else(Block):
+    pass
+
+
+class ElseIf(Block):
     pass
 
 
