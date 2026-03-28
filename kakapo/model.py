@@ -321,7 +321,11 @@ class WhileLoop(Block):
     pass
 
 
-class TryCatch(Block):
+class Try(Block):
+    pass
+
+
+class Catch(Block):
     pass
 
 

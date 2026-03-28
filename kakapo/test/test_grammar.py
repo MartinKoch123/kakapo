@@ -305,7 +305,6 @@ def test_construct_delimiter(string):
 @pytest.mark.parametrize(
     "string",
     (
-        "",
         "a",
         "a;b",
         "a % comment",
@@ -383,6 +382,33 @@ def test_switch(string):
     model = grammar.switch.parse_string(string)[0]
     expected = str(model)
     assert expected == string
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "catch",
+        "catch \n a = 1",
+        "catch \n a = 1",
+    )
+)
+def test_catch(string):
+    model = grammar.catch.parse_string(string)[0]
+    assert str(model) == string
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "try \n end",
+        "try \n a \n end",
+        "try \n catch \n end",
+        # "try \n a; catch \n b = 1 \n end",
+    )
+)
+def test_try(string):
+    model = grammar.try_.parse_string(string)[0]
+    assert str(model) == string
 
 
 

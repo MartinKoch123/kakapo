@@ -96,68 +96,6 @@ KEYWORDS = [
 ParserElement.set_default_whitespace_chars("")
 
 
-def nothing(n: int = 1):
-    return Empty().set_parse_action(
-        lambda s, loc, toks: [model.Missing() for i in range(n)]
-    )
-
-
-def empty_string(n: int = 1):
-    return Empty().set_parse_action(lambda s, loc, toks: [model.Literal("") for i in range(n)])
-
-
-def or_none(expr: ParserElement):
-    """Parse expr or return Missing if not found."""
-    return Opt(expr, default=model.Missing())
-
-def or_empty(expr: ParserElement):
-    """Parse expr or return an empty Literal if not found."""
-    return Opt(expr, default=model.Literal(""))
-
-
-def join_strings(s, loc, toks):
-    return model.Literal("".join(str(t) for t in toks))
-
-
-class ReservedKeyword(ParserElement):
-    """A reserved keyword."""
-
-    def __init__(self):
-        super().__init__()
-        self.parser = Or(Literal(s) for s in KEYWORDS)
-
-    def parseImpl(self, instring, loc, doActions=True):
-        return self.parser._parse(instring, loc, doActions)
-
-    def _generateDefaultName(self) -> str:
-        return "ReservedKeyword"
-
-
-"""White space including ellipsis."""
-ws = Combine(
-    (
-        White(" \t\n") 
-        | Literal("...")
-    )[1, ...]
-).parse_with_tabs() # fmt: skip
-
-"""Optional white space"""
-ows = Opt(ws, default=model.Literal("")).parse_with_tabs()
-
-element_delimiter = Combine(
-    (
-        White(" \t") 
-        | (Literal("...") + Regex(r"[ \t]*\n?[ \t]*"))
-    )[1, ...]
-).parse_with_tabs()
-
-optional_element_delimiter = Opt(
-    element_delimiter, default=model.Literal("")
-).parse_with_tabs()
-
-operator = Or(OPERATORS)
-
-
 class Leaf(ParserElement):
     """Parser for the model.Leaf object. A leaf consists only af a string and does not contain child elements."""
 
@@ -172,6 +110,20 @@ class Leaf(ParserElement):
 
     def _generateDefaultName(self) -> str:
         return "Leaf"
+
+
+class ReservedKeyword(ParserElement):
+    """A reserved keyword."""
+
+    def __init__(self):
+        super().__init__()
+        self.parser = Or(Literal(s) for s in KEYWORDS)
+
+    def parseImpl(self, instring, loc, doActions=True):
+        return self.parser._parse(instring, loc, doActions)
+
+    def _generateDefaultName(self) -> str:
+        return "ReservedKeyword"
 
 
 class DelimitedList(ParserElement):
@@ -225,33 +177,37 @@ class Block(ParserElement):
         name: str,
         content: ParserElement,
         head: ParserElement | None = None,
+        optional_head: bool = False,
         end: bool | str = True,
     ):
         super().__init__()
 
-        head = head if head else nothing()
-
         end_placeholder = empty_string() + nothing()
 
-        end_element = ows + Leaf("end")
+        end_element = end_delimiter + Leaf("end")
         if isinstance(end, str):
             assert end == "optional"
             end_element |= end_placeholder
         elif not end:
             end_element = end_placeholder
 
+        if head is None:
+            head_parser = nothing(2)
+        else:
+            if optional_head:
+                head_parser = (element_delimiter + head) | nothing(2)
+            else:
+                head_parser = element_delimiter + head
+
+        content_parser = ((construct_delimiter + content) | nothing(2))
+
+
         self.parser = (
             Leaf(name)
-            + (
-                (optional_element_delimiter + head)
-                | nothing(2)
-            )
-            + (
-                (construct_delimiter + content)
-                | nothing(2)
-            )
+            + head_parser
+            + content_parser
             + end_element
-        )
+        ) # fmt: skip
 
     def parseImpl(self, instring, loc, doActions=True):
         return self.parser._parse(instring, loc, doActions)
@@ -260,11 +216,34 @@ class Block(ParserElement):
         return "Block"
 
 
-def ows_delimited_list(expr: ParserElement, allow_empty: bool = False) -> ParserElement:
-    result = expr + ZeroOrMore(construct_delimiter + expr)
-    if allow_empty:
-        result = result | empty
-    return result
+def nothing(n: int = 1):
+    return Empty().set_parse_action(
+        lambda s, loc, toks: [model.Missing() for i in range(n)]
+    )
+
+
+def empty_string(n: int = 1):
+    return Empty().set_parse_action(
+        lambda s, loc, toks: [model.Literal("") for i in range(n)]
+    )
+
+
+def or_none(expr: ParserElement):
+    """Parse expr or return Missing if not found."""
+    return Opt(expr, default=model.Missing())
+
+
+def or_empty(expr: ParserElement):
+    """Parse expr or return an empty Literal if not found."""
+    return Opt(expr, default=model.Literal(""))
+
+
+def join_strings(s, loc, toks):
+    return model.Literal("".join(str(t) for t in toks))
+
+
+def construct_list(expr: ParserElement) -> ParserElement:
+    return expr + ZeroOrMore(construct_delimiter + expr)
 
 
 def parenthesized(
@@ -295,6 +274,39 @@ def parenthesized(
     )
 
 
+"""White space including ellipsis."""
+ws = Combine(
+    (
+        White(" \t\n") 
+        | Literal("...")
+    )[1, ...]
+).parse_with_tabs() # fmt: skip
+
+
+"""Optional white space"""
+ows = Opt(ws, default=model.Literal("")).parse_with_tabs()
+
+
+element_delimiter = Combine(
+    (White(" \t") | (Literal("...") + Regex(r"[ \t]*\n?[ \t]*")))[1, ...]
+).parse_with_tabs()
+
+optional_element_delimiter = Opt(
+    element_delimiter, default=model.Literal("")
+).parse_with_tabs()
+
+
+construct_delimiter = (
+    ows + Literal(";") + ows
+    | Regex(r"[ \t]*\n") + empty_string() + ows
+    | Regex(r"[ \t]*") + empty_string() + ows + FollowedBy(Literal("%"))
+)
+
+end_delimiter = Regex(r"[ \t\n;]+")
+
+operator = Or(OPERATORS)
+
+
 """
 A string identifying a variable, function or class. Includes namespace syntax.
 Examples:
@@ -314,14 +326,6 @@ identifier = (
 
 """A comment. Starts at the comment marker '%' end ends before the next line break."""
 comment = Leaf("%") + rest_of_line.add_parse_action(model.Literal.from_tokens)
-
-
-construct_delimiter = (
-    ows + Literal(";") + ows
-    | Regex(r"[ \t]*\n") + empty_string() + ows
-    | Regex(r"[ \t]*") + empty_string() + ows + FollowedBy(Literal("%"))
-    # | line_end
-)
 
 
 """A quoted string with single or double quotes."""
@@ -448,16 +452,9 @@ while_loop = Block(name="while", head=no_output_statement, content=code)
 """Function definition block."""
 function = Block(name="function", head=statement, content=code, end="optional")
 
-catch = (
-    Leaf("catch")
-    + Opt(White(" \t") + statement_core, default=model.Missing()).add_parse_action(
-        lambda toks: ["", ""] if toks[0] is None else toks
-    )
-    + ws
-    + code
-)
+catch = Block(name="catch", content=code, end=False)
 
-try_catch = Block(name="try", content=(code + or_none(ws + catch)))
+try_ = Block(name="try", content=code)
 
 """'case'-block within a switch statement."""
 switch_case = Block(name="case", head=no_output_statement, content=code, end=False)
@@ -466,11 +463,7 @@ switch_case = Block(name="case", head=no_output_statement, content=code, end=Fal
 switch_otherwise = Block(name="otherwise", content=code, end=False)
 
 """Switch statement code block"""
-switch = Block(
-    name="switch",
-    head=no_output_statement,
-    content=code
-)
+switch = Block(name="switch", head=no_output_statement, content=code)
 
 classdef = Block(
     name="classdef",
@@ -480,8 +473,9 @@ classdef = Block(
 
 properties = Block(
     name="properties",
-    head=or_none(arguments_list),
+    head=arguments_list,
     content=code,
+    optional_head=True,
 )
 
 methods = Block(
@@ -492,26 +486,27 @@ methods = Block(
 
 command_identifier = Combine(identifier + Opt(".*"))
 command = (
-    command_identifier 
+    command_identifier
     + ZeroOrMore(element_delimiter + command_identifier)
     + (StringEnd() | FollowedBy(construct_delimiter))
 )
 
 any_block = (
-    if_block
-    | for_loop
-    | while_loop
-    | function
-    | try_catch
-    | switch
+    catch
     | classdef
+    | if_block
+    | for_loop
+    | function
     | methods
     | properties
+    | switch
     | switch_case
     | switch_otherwise
+    | try_
+    | while_loop
 )
 
-code << ows_delimited_list(command | statement | comment | any_block, allow_empty=True)
+code << construct_list(command | statement | comment | any_block)
 
 """A file consisting of code wrapped by optional white space."""
 file = ows + code + ows
@@ -521,36 +516,37 @@ file.enable_packrat()
 
 # Add parse actions to grammar objects that turn the tokens into the respective dataclass.
 parse_actions = {
-    arguments_list: model.ArgumentsList,
-    function: model.Function,
-    if_block: model.If,
-    try_catch: model.TryCatch,
-    for_loop: model.ForLoop,
-    while_loop: model.WhileLoop,
-    call: model.Call,
-    output_arguments: model.OutputArguments,
-    comment: model.Comment,
-    operation: model.Operation,
-    no_output_statement: model.Statement,
-    output_statement: model.Statement,
-    code: model.Code,
     anonymous_function: model.AnonymousFunction,
     array: model.Array,
-    single_element_operation: model.SingleElementOperation,
+    arguments_list: model.ArgumentsList,
+    call: model.Call,
+    catch: model.Catch,
+    classdef: model.Classdef,
+    code: model.Code,
+    command: model.Command,
+    command_identifier: model.Literal,
+    comment: model.Comment,
+    construct_delimiter: model.ConstructDelimiter,
+    element_delimiter: model.Literal,
     file: model.File,
+    for_loop: model.ForLoop,
+    function: model.Function,
+    identifier: model.Literal,
+    if_block: model.If,
+    methods: model.Methods,
+    no_output_statement: model.Statement,
+    operation: model.Operation,
+    output_arguments: model.OutputArguments,
+    output_statement: model.Statement,
+    properties: model.Properties,
+    single_element_operation: model.SingleElementOperation,
+    string: model.Literal,
     switch: model.Switch,
     switch_case: model.Case,
     switch_otherwise: model.Case,
-    command: model.Command,
-    classdef: model.Classdef,
-    methods: model.Methods,
-    properties: model.Properties,
-    command_identifier: model.Literal,
-    identifier: model.Literal,
+    try_: model.Try,
+    while_loop: model.WhileLoop,
     ws: model.Literal,
-    element_delimiter: model.Literal,
-    construct_delimiter: model.ConstructDelimiter,
-    string: model.Literal,
 }
 
 for parser_element, target_class in parse_actions.items():
