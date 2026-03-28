@@ -439,7 +439,7 @@ if_block = Block(
 )
 
 """For-loop code block."""
-for_loop = Block(
+for_ = Block(
     name="for",
     head=output_statement,
     content=code,
@@ -447,7 +447,7 @@ for_loop = Block(
 )
 
 """While-loop code block."""
-while_loop = Block(name="while", head=no_output_statement, content=code)
+while_ = Block(name="while", head=no_output_statement, content=code)
 
 """Function definition block."""
 function = Block(name="function", head=statement, content=code, end="optional")
@@ -495,7 +495,7 @@ any_block = (
     catch
     | classdef
     | if_block
-    | for_loop
+    | for_
     | function
     | methods
     | properties
@@ -503,7 +503,7 @@ any_block = (
     | switch_case
     | switch_otherwise
     | try_
-    | while_loop
+    | while_
 )
 
 code << construct_list(command | statement | comment | any_block)
@@ -529,7 +529,7 @@ parse_actions = {
     construct_delimiter: model.ConstructDelimiter,
     element_delimiter: model.Literal,
     file: model.File,
-    for_loop: model.ForLoop,
+    for_: model.ForLoop,
     function: model.Function,
     identifier: model.Literal,
     if_block: model.If,
@@ -545,7 +545,7 @@ parse_actions = {
     switch_case: model.Case,
     switch_otherwise: model.Case,
     try_: model.Try,
-    while_loop: model.WhileLoop,
+    while_: model.WhileLoop,
     ws: model.Literal,
 }
 

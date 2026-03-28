@@ -403,11 +403,37 @@ def test_catch(string):
         "try \n end",
         "try \n a \n end",
         "try \n catch \n end",
-        # "try \n a; catch \n b = 1 \n end",
+        "try \n a; catch \n b = 1 \n end",
     )
 )
 def test_try(string):
     model = grammar.try_.parse_string(string)[0]
+    assert str(model) == string
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "for i = 1\n end",
+        "for i = 1:2\n a = 1 end",
+        "for i = test\n a = 1\n b = 2\n end",
+    ),
+)
+def test_for(string):
+    model = grammar.for_.parse_string(string)[0]
+    assert str(model) == string
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "while true\n end",
+        "while a == func()\n a = 1 end",
+        "while true\n a = 1\n b = 2\n end",
+    ),
+)
+def test_while(string):
+    model = grammar.while_.parse_string(string)[0]
     assert str(model) == string
 
 
