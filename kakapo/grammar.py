@@ -241,6 +241,10 @@ def construct_list(expr: ParserElement) -> ParserElement:
     return expr + ZeroOrMore(construct_delimiter + expr)
 
 
+def regex_literal(pattern: str) -> ParserElement:
+    return Regex(pattern).add_parse_action(model.Literal.from_tokens)
+
+
 def parenthesized(
     content: ParserElement,
     brackets: Sequence[tuple[str, str]] = (("(", ")"),),
@@ -292,9 +296,9 @@ optional_element_delimiter = Opt(
 
 
 construct_delimiter = (
-    ows + Literal(";") + ows
-    | Regex(r"[ \t]*\n") + empty_string() + ows
-    | Regex(r"[ \t]*") + empty_string() + ows + FollowedBy(Literal("%"))
+    ows + Leaf(";") + ows
+    | regex_literal(r"[ \t]*\n") + empty_string() + ows
+    | regex_literal(r"[ \t]*") + empty_string() + ows + FollowedBy(Literal("%"))
 )
 
 end_delimiter = Regex(r"[ \t\n;]+")
@@ -523,8 +527,14 @@ any_block = (
 
 code << construct_list(command | statement | comment | any_block)
 
+
+file = (
+    regex_literal(r"[ \t\n;]*") 
+    + or_none(code) 
+    + (regex_literal(r"[ \t\n;]*") | (empty_string() + StringEnd())) # Regex fails mysteriously at string end.
+)
 """A file consisting of code wrapped by optional white space."""
-file = ows + code + ows
+
 
 # Packrat gives a massive performance increase.
 file.enable_packrat()

@@ -461,6 +461,20 @@ def test_while(string):
     assert str(model) == string
 
 
+@pytest.mark.parametrize(
+    "string",
+    (
+        "",
+        " a = 1 \n b = 2",
+        "a = 1 \n b = 2  ",
+        " ;; a = 1 ;\n "
+    ),
+)
+def test_file(string):
+    model = grammar.file.parse_string(string, parse_all=True)[0]
+    assert str(model) == string
+
+
 
 if __name__ == "__main__":
     pytest.main()

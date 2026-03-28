@@ -56,7 +56,7 @@ def test_remove_white_space_before_semicolon(input_: str, expected: str):
 )
 def test_remove_white_space_and_semicolon_after_end_keyword(input_: str, expected: str):
     actual = format(
-        formatter.remove_white_space_and_semicolon_after_end_keyword, input_
+        formatter.remove_post_block_whitespace_and_semicolon, input_
     )
     assert actual == expected
 
@@ -75,7 +75,7 @@ def test_remove_white_space_and_semicolon_after_if_condition(
     input_: str, expected: str
 ):
     actual = format(
-        formatter.remove_white_space_and_semicolon_after_if_condition,
+        formatter.remove_post_block_head_whitespace_and_semicolon,
         input_,
     )
     assert actual == expected
@@ -84,9 +84,9 @@ def test_remove_white_space_and_semicolon_after_if_condition(
 @pytest.mark.parametrize(
     "input_, expected",
     [
-        ("return ;", "return"),
-        ("break\t ;", "break"),
-        ("continue   ;", "continue"),
+        ("return ; a", "return a"),
+        ("break\t ; a", "break a"),
+        ("continue;a", "continue a"),
     ],
 )
 def test_remove_semicolon_after_keyword(input_: str, expected: str):

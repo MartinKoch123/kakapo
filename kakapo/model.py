@@ -264,19 +264,19 @@ class DelimitedList(VariableLengthComposite):
 @dataclass
 class Block(Composite, Construct):
     name: Literal
-    element_delimiter: Literal
+    pre_head_delimiter: Literal
     head: Component | Missing
-    construct_delimiter: Literal
+    pre_body_delimiter: ConstructDelimiter
     body: Component
-    whitespace_before_end: Literal
-    end_keyword: Literal | Missing
+    pre_end_delimiter: Literal
+    end: Literal | Missing
 
 
 @dataclass
 class ConstructDelimiter(Composite):
-    whitespace_before_semicolon: Literal
+    pre_semicolon_whitespace: Literal
     semicolon: Literal
-    whitespace_after_semicolon: Literal
+    post_semicolon_whitespace: Literal
 
 
 class Function(Block):
@@ -343,9 +343,9 @@ class Otherwise(Block):
 
 @dataclass
 class File(Composite):
-    leading_whitespace: Literal
+    leading_delimiter: Literal
     code: Code
-    trailing_whitespace: Literal
+    trailing_delimiter: Literal
 
 
 @dataclass
