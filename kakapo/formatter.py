@@ -249,4 +249,4 @@ def format_file(file: model.File):
     normalize_trailing_whitespace(file)
     ensure_empty_line_before_comment(file)
     ensure_comment_leading_space(file)
-    break_arguments(file)
+    # break_arguments(file)

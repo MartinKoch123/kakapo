@@ -372,17 +372,6 @@ class Classdef(Block):
 
 
 class Else(Block):
-    # def descendants_and_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
-    #     level -= 1
-    #     for i, child in enumerate(self):
-    #         if i == 4:
-    #             level += 1
-    #         if i == 5:
-    #             level -= 1
-    #         yield child, level
-    #         if isinstance(child, Composite):
-    #             for grand_child, grand_child_level in child.descendants_and_indent(level):
-    #                 yield grand_child, grand_child_level
     pass
 
 

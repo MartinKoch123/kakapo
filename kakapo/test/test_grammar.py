@@ -120,8 +120,8 @@ def test_import(string, expected):
 @pytest.mark.parametrize(
     "string, expected",
     [
-        ("% hello world", model.Comment("%", " hello world")),
-        ("%", model.Comment("%", "")),
+        ("% hello world", model.Comment(model.Literal("%"), model.Literal(" hello world"))),
+        ("%", model.Comment(model.Literal("%"), model.Literal(""))),
     ],
 )
 def test_comment(string, expected):
