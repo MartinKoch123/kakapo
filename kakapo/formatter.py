@@ -21,7 +21,7 @@ def format_type(type_: type[model.Component]):
 
 
 @format_type(model.DelimitedList)
-def normalize_whitespace_in_arguments_list(delimited_list: model.DelimitedList):
+def normalize_whitespace_in_delimited_list(delimited_list: model.DelimitedList):
     for i, element in enumerate(delimited_list):
         # Children 1, 3, ... are whitespace and delimiters.
         if i % 2 == 0:
@@ -31,7 +31,7 @@ def normalize_whitespace_in_arguments_list(delimited_list: model.DelimitedList):
         string = string.strip(" \n\t")  # Remove whitespace surrounding delimiter
         string = string.replace("...", "")  # Remove ellipsis
         string += " "  # Add single space after delimiter.
-        if isinstance(delimited_list.parent.parent, model.Operation):
+        if not any(char in string for char in ",;"):
             string = " " + string
         element.value = string
 
@@ -246,7 +246,7 @@ def add_empty_lines_around_block_body(block: model.Block):
 
 
 def format_file(file: model.File):
-    normalize_whitespace_in_arguments_list(file)
+    normalize_whitespace_in_delimited_list(file)
     normalize_whitespace_in_parenthesized(file)
     normalize_whitespace_in_assignment(file)
     remove_post_block_whitespace_and_semicolon(file)

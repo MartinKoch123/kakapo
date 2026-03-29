@@ -147,10 +147,12 @@ def test_ensure_comment_leading_space(input_: str, expected: str):
     (
         ("func(1,  2\t\t,  3)", "func(1, 2, 3)"),
         ("func(max(1, 2)  , 'text',   3.12)", "func(max(1, 2), 'text', 3.12)"),
+        ("1+1", "1 + 1"),
+        ("1  :1", "1 : 1"),
     ),
 )
-def test_normalize_whitespace_in_arguments_list(input_: str, expected: str):
-    actual = format(formatter.normalize_whitespace_in_arguments_list, input_)
+def test_normalize_whitespace_in_delimited_list(input_: str, expected: str):
+    actual = format(formatter.normalize_whitespace_in_delimited_list, input_)
     assert actual == expected
 
 
