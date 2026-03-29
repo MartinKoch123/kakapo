@@ -131,19 +131,18 @@ def ensure_empty_line_before_comment(code: model.Code):
         child.predecessor.post_semicolon_whitespace.value = "\n" + child.predecessor.post_semicolon_whitespace.value
 
 
-def normalize_indentation(component: model.Component):
+def normalize_indentation(composite: model.Composite):
 
-    for element, level in component.descendants_and_indent():
+    for element, level in composite.descendants_and_indent():
 
         if (
-            not isinstance(element, (model.Construct, model.Code)) 
-            and (
-                not isinstance(element, model.Literal)
-                or element not in ["end", "elseif", "else"]
-            )
-        ): # fmt: skip
+            not isinstance(element, model.Construct)
+            and (not isinstance(element, model.Literal) or element.value != "end")
+        ):
             continue
+
         parent = element.parent
+        predecessor = element.predecessor
 
         element_is_block_head = (
             parent
@@ -163,19 +162,22 @@ def normalize_indentation(component: model.Component):
         # ):
         #     continue
 
+        assert level >= 0
         indent = level * INDENT
 
-        # Current element has a predecessor, i.e. its not the first element of its parent.
-        if element.predecessor or (
-            parent is not None and parent.predecessor is not None
-        ):
-            if element.predecessor:
-                modified_element = element.predecessor
-            else:
-                modified_element = parent.predecessor
+        if not predecessor and not parent:
+            continue
 
-            # Predecessor should be whitespace.
-            assert isinstance(modified_element, model.Literal)
+        if predecessor:
+            modified_element = predecessor
+        else:
+            modified_element = parent.predecessor
+
+        # Predecessor should be whitespace.
+        assert isinstance(modified_element, (model.Literal, model.StatementDelimiter))
+                            
+        if isinstance(modified_element, model.Literal):
+
             whitespace = modified_element.value
             assert whitespace.isspace() or whitespace == ""
 
@@ -191,8 +193,22 @@ def normalize_indentation(component: model.Component):
 
             modified_element.value = whitespace
 
-        elif parent is not None:
-            raise NotImplementedError
+        else:
+            string = str(modified_element)
+
+            whitespace = modified_element.post_semicolon_whitespace.value
+
+            # Remove current indentation (to be added later).
+            whitespace = whitespace.rstrip(" ")
+
+            # Ensure there is a newline at the end of the whitespace, so that the current element is on a new line.
+            if modified_element.predecessor and not string.rstrip(" ").endswith("\n"):
+                whitespace += "\n"
+
+            # Add normalized indentation.
+            whitespace = whitespace + indent
+
+            modified_element.post_semicolon_whitespace.value = whitespace
 
 
 def break_arguments(element: model.Component, max_line_length: int = 120):

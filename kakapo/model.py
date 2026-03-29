@@ -107,10 +107,14 @@ class Composite(Component):
 
     def descendants_and_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
         for child in self:
+            if isinstance(child, (Else, ElseIf, Catch)):
+                level -= 1
             yield child, level
             if isinstance(child, Composite):
                 for grand_child, grand_child_level in child.descendants_and_indent(level):
                     yield grand_child, grand_child_level
+            if isinstance(child, (Else, ElseIf, Catch)):
+                level += 1
 
     def pretty_string(
         self,
@@ -271,6 +275,17 @@ class Block(Composite, Construct):
     pre_end_delimiter: Literal
     end: Literal | Missing
 
+    def descendants_and_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
+        for i, child in enumerate(self):
+            if i == 4:
+                level += 1
+            if i == 5:
+                level -= 1
+            yield child, level
+            if isinstance(child, Composite):
+                for grand_child, grand_child_level in child.descendants_and_indent(level):
+                    yield grand_child, grand_child_level
+
 
 @dataclass
 class StatementDelimiter(Composite):
@@ -296,22 +311,7 @@ class Methods(Block):
 
 
 class If(Block):
-
-    def descendants_and_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
-        for i, child in enumerate(self):
-            if i == 4:
-                level += 1
-            if isinstance(child, Literal) and child.value.startswith("else"):
-                level -= 1
-            if i == len(self) - 3:
-                level += -1
-            yield child, level
-            if isinstance(child, Composite):
-                for grand_child, grand_child_level in child.descendants_and_indent(level):
-                    yield grand_child, grand_child_level
-            if isinstance(child, Literal) and child.value.startswith("else"):
-                level += 1
-
+    pass
 
 class ForLoop(Block):
     pass
@@ -388,6 +388,17 @@ class Classdef(Block):
 
 
 class Else(Block):
+    # def descendants_and_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
+    #     level -= 1
+    #     for i, child in enumerate(self):
+    #         if i == 4:
+    #             level += 1
+    #         if i == 5:
+    #             level -= 1
+    #         yield child, level
+    #         if isinstance(child, Composite):
+    #             for grand_child, grand_child_level in child.descendants_and_indent(level):
+    #                 yield grand_child, grand_child_level
     pass
 
 
