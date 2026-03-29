@@ -348,6 +348,7 @@ def test_else_if(string):
     (
         "if true\n end",
         "if true\n a = 1 end",
+        "if 1 \n a \n elseif 2 \n elseif 3 \n b \n else \n c \n end",
     ),
 )
 def test_if(string):

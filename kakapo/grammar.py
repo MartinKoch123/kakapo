@@ -15,11 +15,12 @@ from pyparsing import (
     common,
     empty,
     Empty,
+    FollowedBy,
+    Forward,
+    Keyword,
     Literal,
     Opt,
     Or,
-    FollowedBy,
-    Forward,
     ParserElement,
     PrecededBy,
     QuotedString,
@@ -108,7 +109,7 @@ class ReservedKeyword(ParserElement):
 
     def __init__(self):
         super().__init__()
-        self.parser = Or(Literal(s) for s in KEYWORDS)
+        self.parser = Or(Keyword(s) for s in KEYWORDS).add_parse_action(model.Literal.from_tokens)
 
     def parseImpl(self, instring, loc, doActions=True):
         return self.parser._parse(instring, loc, doActions)
@@ -199,7 +200,7 @@ class Block(ParserElement):
         content_parser = (statement_delimiter + content) | nothing(2)
 
         self.parser = (
-            Leaf(name)
+            Keyword(name).add_parse_action(model.Literal.from_tokens)
             + head_parser
             + content_parser
             + end_element
@@ -408,10 +409,10 @@ operand << (
 operation << DelimitedList(operand, delimiter=operator, min_elements=2)
 expression << (operation | operand)
 
-keyword = Or(Leaf(kw) for kw in ["return", "break", "continue"])
+keyword_statement = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 
 
-statement_core = expression | keyword
+statement_core = expression | keyword_statement
 """An assignment or an expression with either no result or an unused result."""
 
 expression_statement = nothing(1) + statement_core
