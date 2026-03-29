@@ -159,6 +159,7 @@ class Composite(Component):
 
     @classmethod
     def from_tokens(cls, tokens: Sequence):
+        print(tokens)
         return cls(*tokens)
 
 
@@ -356,8 +357,16 @@ class Array(Composite):
     parenthesized: Parenthesized
 
 
-class SingleElementOperation(Composite):
-    pass
+@dataclass
+class PrefixOperation(Composite):
+    operator: Literal
+    operand: Component
+
+
+@dataclass
+class PostfixOperation(Composite):
+    operand: Component
+    operator: Literal
 
 
 @dataclass(eq=False)

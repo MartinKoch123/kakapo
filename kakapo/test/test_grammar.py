@@ -480,6 +480,37 @@ def test_file(string):
     assert str(model) == string
 
 
+@pytest.mark.parametrize(
+    "string",
+    (
+        "-a",
+        "~a",
+        "-1",
+        "~func()",
+        "-(a + b)",
+    ),
+)
+def test_prefix_operation(string):
+    model = grammar.prefix_operation.parse_string(string, parse_all=True)[0]
+    expected = str(model)
+    assert expected == string
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "a'",
+        "a.'",
+        "func()'",
+        "(a + b)'",
+    ),
+)
+def test_postfix_operation(string):
+    model = grammar.postfix_operation.parse_string(string)[0]
+    expected = str(model)
+    assert expected == string
+
+
 
 if __name__ == "__main__":
     pytest.main()

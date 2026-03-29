@@ -404,16 +404,16 @@ operand_atom << (
     | parenthesized(operation)
 )
 
-left_operation = (Leaf("-") | Leaf("~")) + operand_atom
-right_operation = operand_atom + (Leaf("'") | Leaf(".'"))
+prefix_operation = (Leaf("-") | Leaf("~")) + operand_atom
+postfix_operation = operand_atom + (Leaf("'") | Leaf(".'"))
 
-single_element_operation = left_operation | right_operation
+unary_operation = prefix_operation | postfix_operation
 
 operand << (
-    single_element_operation
-    | operand_atom
-    | parenthesized(operand)
-    | parenthesized(operation)
+        unary_operation
+        | operand_atom
+        | parenthesized(operand)
+        | parenthesized(operation)
 )
 operation << DelimitedList(operand, delimiter=operator, min_elements=2)
 expression << (operation | operand)
@@ -573,8 +573,9 @@ parse_actions = {
     operation: model.Operation,
     assignment_target: model.AssignmentTarget,
     assignment_statement: model.Statement,
+    postfix_operation: model.PostfixOperation,
+    prefix_operation: model.PrefixOperation,
     properties: model.Properties,
-    single_element_operation: model.SingleElementOperation,
     string: model.Literal,
     switch: model.Switch,
     switch_case: model.Case,
