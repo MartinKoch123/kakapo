@@ -206,12 +206,14 @@ def test_string(input_, expected):
 @pytest.mark.parametrize(
     "string",
     (
-        "func",
+        # "func",
         "func()",
         "func(  )",
         "func(1)",
         "func(1, a)",
         "func(1,a,  2 / 3 + max(1, 2))",
+        "f()()",
+        "f(a,b)(1,2)(3,4)",
     ),
 )
 def test_call(string):
@@ -327,7 +329,7 @@ def test_code(string):
     ),
 )
 def test_else(string):
-    model = grammar.else_.parse_string(string)[0]
+    model = grammar.else_.parse_string(string, parse_all=True)[0]
     assert str(model) == string
 
 

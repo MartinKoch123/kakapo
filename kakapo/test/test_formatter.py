@@ -186,7 +186,8 @@ def test_normalize_indentation(string: str, expected: str):
 @pytest.mark.parametrize(
     "string, expected",
     (
-        ("a\n\nb", "a\nb"),
+        ("a\n\n\nb", "a\n\nb"),
+        ("a\n   \n  \nb", "a\n\nb"),
     )
 )
 def test_remove_excess_newlines(string: str, expected: str):

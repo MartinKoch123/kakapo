@@ -338,7 +338,7 @@ call = Forward()
 
 assignment_target = (
     parenthesized(
-        DelimitedList(call, delimiter=","),
+        DelimitedList(call | identifier, delimiter=","),
         brackets=(("[", "]"),),
         optional=True,
     )
@@ -361,9 +361,17 @@ arguments_list = (
 
 """A variable or a function call with or without arguments. Includes nested calls."""
 call << (
-    identifier 
-    + (arguments_list[1, ...] | nothing(1))
+    identifier
+    + arguments_list[1, ...]
 ) # fmt: skip
+
+def nest_calls(s, loc, toks):
+    result = model.Call.from_tokens(toks[:2])  # base + first args
+    for args in toks[2:]:
+        result = model.Call.from_tokens([result, args])
+    return result
+
+call.add_parse_action(nest_calls)
 
 """
 Anonymous function definition
@@ -390,6 +398,7 @@ operand_atom << (
     | number
     | string
     | array
+    | identifier
     | anonymous_function
     | parenthesized(operand)
     | parenthesized(operation)
@@ -545,7 +554,6 @@ parse_actions = {
     array: model.Array,
     arguments_list: model.ArgumentsList,
     expression_statement: model.Statement,
-    call: model.Call,
     catch: model.Catch,
     classdef: model.Classdef,
     code: model.Code,
