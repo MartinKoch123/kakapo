@@ -19,19 +19,20 @@ def format_type(type_: type[model.Composite]):
     return decorator
 
 
-@format_type(model.ElementsList)
-def normalize_whitespace_in_arguments_list(elements_list: model.ElementsList):
-    for i, token in enumerate(elements_list.elements_list):
+@format_type(model.DelimitedList)
+def normalize_whitespace_in_arguments_list(delimited_list: model.DelimitedList):
+    for i, element in enumerate(delimited_list):
         # Children 1, 3, ... are whitespace and delimiters.
         if i % 2 == 0:
             continue
-        string: str = token.value
+        assert isinstance(element, model.Literal)
+        string = element.value
         string = string.strip(" \n\t")  # Remove whitespace surrounding delimiter
         string = string.replace("...", "")  # Remove ellipsis
         string += " "  # Add single space after delimiter.
-        if isinstance(elements_list, model.Operation):
+        if isinstance(delimited_list.parent.parent, model.Operation):
             string = " " + string
-        elements_list.elements_list.children[i] = model.Literal(string)
+        element.value = string
 
 
 @format_type(model.Parenthesized)
@@ -202,36 +203,36 @@ def normalize_indentation(composite: model.Composite):
             modified_element.post_semicolon_whitespace.value = whitespace
 
 
-def break_arguments(element: model.Component, max_line_length: int = 120):
-    for element, level in element.descendants_and_indent():
+# def break_arguments(element: model.Composite, max_line_length: int = 120):
+#     for descendant, level in element.descendants_and_indent():
 
-        if not isinstance(element, model.Statement):
-            continue
+#         if not isinstance(descendant, model.Statement):
+#             continue
 
-        outer_indent = level * INDENT
-        inner_indent = (level + 1) * INDENT
+#         outer_indent = level * INDENT
+#         inner_indent = (level + 1) * INDENT
 
-        line_length = len(str(element) + inner_indent)
-        if line_length <= max_line_length:
-            continue
+#         line_length = len(str(descendant) + inner_indent)
+#         if line_length <= max_line_length:
+#             continue
 
-        body = element.body
-        if not isinstance(body, model.Call):
-            continue
+#         body = descendant.body
+#         if not isinstance(body, model.Call):
+#             continue
 
-        args_list = body.arguments_list
-        if isinstance(args_list, model.Missing):
-            continue
+#         args_list = body.arguments_list
+#         if isinstance(args_list, model.Missing):
+#             continue
 
-        args_list[1][1] = " ...\n" + inner_indent
+#         args_list[1][1] = " ...\n" + inner_indent
 
-        for i, token in enumerate(args_list.elements_list):
-            if i % 2 == 0:
-                continue
+#         for i, token in enumerate(args_list.elements_list):
+#             if i % 2 == 0:
+#                 continue
 
-            args_list.elements_list[i] = ", ...\n" + inner_indent
+#             args_list.elements_list[i] = ", ...\n" + inner_indent
 
-        args_list[1][3] = " ...\n" + outer_indent
+#         args_list[1][3] = " ...\n" + outer_indent
 
 
 def format_file(file: model.File):

@@ -174,17 +174,9 @@ class ElementsList(Composite):
 
 
 @dataclass
-class ArgumentsList(ElementsList):
+class ArgumentsList(Composite):
     dot: Literal
     parenthesized: Parenthesized
-
-    @property
-    def elements_list(self) -> DelimitedList:
-        return self.parenthesized.content
-
-    @property
-    def elements(self) -> Sequence:
-        return self.elements_list.elements
 
 
 @dataclass
@@ -214,7 +206,7 @@ class Comment(Composite, Construct):
 
 
 @dataclass
-class Operation(ElementsList):
+class Operation(Composite):
     delimited_list: DelimitedList
 
 
@@ -362,16 +354,8 @@ class AnonymousFunction(Composite):
 
 
 @dataclass
-class Array(ElementsList):
+class Array(Composite):
     parenthesized: Parenthesized
-
-    @property
-    def elements_list(self) -> DelimitedList | Missing:
-        return self.parenthesized.content
-
-    @property
-    def elements(self) -> list:
-        return self.elements_list.elements if not isinstance(self.elements_list, Missing) else Missing()
 
 
 class SingleElementOperation(Composite):
