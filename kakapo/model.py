@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import KW_ONLY, dataclass, field, fields
+import re
 from typing import Generator, Sequence, Any, Type
 
 
@@ -42,6 +43,9 @@ class Literal(Component):
     """Leaf with literal value."""
 
     value: str
+
+    def regex_replace(self, pattern: str, repl: str):
+        self.value = re.sub(pattern=pattern, repl=repl, string=self.value)
 
     def __str__(self) -> str:
         return self.value
@@ -262,7 +266,7 @@ class Block(Composite, Construct):
     name: Literal
     pre_head_delimiter: Literal
     head: Component | Missing
-    pre_body_delimiter: StatementDelimiter
+    pre_body_delimiter: Literal
     body: Component
     pre_end_delimiter: Literal
     end: Literal | Missing
@@ -278,12 +282,6 @@ class Block(Composite, Construct):
                 for grand_child, grand_child_level in child.descendants_and_indent(level):
                     yield grand_child, grand_child_level
 
-
-@dataclass
-class StatementDelimiter(Composite):
-    pre_semicolon_whitespace: Literal
-    semicolon: Literal
-    post_semicolon_whitespace: Literal
 
 
 class Function(Block):

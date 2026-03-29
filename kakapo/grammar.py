@@ -282,7 +282,7 @@ element_delimiter = Combine(
 ).parse_with_tabs() # fmt: skip
 
 
-statement_delimiter = (
+statement_delimiter = Combine(
     ows + Leaf(";") + ows
     | regex_literal(r"[ \t]*\n") + empty_string() + ows
     | regex_literal(r"[ \t]*") + empty_string() + ows + FollowedBy(Literal("%"))
@@ -552,7 +552,7 @@ parse_actions = {
     command: model.Command,
     command_identifier: model.Literal,
     comment: model.Comment,
-    statement_delimiter: model.StatementDelimiter,
+    statement_delimiter: model.Literal,
     element_delimiter: model.Literal,
     else_: model.Else,
     else_if: model.ElseIf,

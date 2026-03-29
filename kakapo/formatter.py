@@ -1,4 +1,5 @@
 from unittest import case
+import re
 
 from . import model
 from .model import Literal
@@ -7,7 +8,7 @@ from .model import Literal
 INDENT = 4 * " "
 
 
-def format_type(type_: type[model.Composite]):
+def format_type(type_: type[model.Component]):
     def decorator(func):
         def wrapper(code: model.Composite):
             for element in code.descendants():
@@ -50,37 +51,34 @@ def normalize_whitespace_in_assignment(output_arguments: model.AssignmentTarget)
 
 @format_type(model.Block)
 def remove_post_block_whitespace_and_semicolon(block: model.Block):
-    if not isinstance(block.successor, model.StatementDelimiter):
+    if not isinstance(block.successor, model.Literal):
         return
-    block.successor.pre_semicolon_whitespace = Literal("")
-    block.successor.semicolon = Literal("")
+    block.successor.regex_replace(pattern=r"^(\s*;+)+", repl="")
 
 
 @format_type(model.Block)
 def remove_post_block_head_whitespace_and_semicolon(block: model.Block):
-    block.pre_body_delimiter.pre_semicolon_whitespace = Literal("")
-    block.pre_body_delimiter.semicolon = Literal("")
+    block.pre_body_delimiter.regex_replace(pattern=r"^(\s*;+)+", repl="")
 
 
 def remove_white_space_and_semicolon_after_keyword(code: model.Composite):
     for element in code.descendants():
         match element:
-            case model.StatementDelimiter(
+            case model.Literal(
                 predecessor=model.Statement(
                     body=Literal(value="return" | "break" | "continue")
                 )
             ):
-                element.pre_semicolon_whitespace = Literal("")
-                element.semicolon = Literal("")
+                element.regex_replace(pattern=r"^(\s*;+)+", repl="")
 
                 # Ensure delimiter contains at least one space.
-                if element.post_semicolon_whitespace == Literal(""):
-                    element.post_semicolon_whitespace = Literal(" ")
+                if element.value == "":
+                    element.value = " "
 
 
-@format_type(model.StatementDelimiter)
-def remove_white_space_before_semicolon(statement: model.StatementDelimiter):
-    statement.pre_semicolon_whitespace = Literal("")
+@format_type(model.Literal)
+def remove_white_space_before_semicolon(literal: model.Literal):
+    literal.regex_replace(pattern=r"^[\s;]+;", repl=";")
 
 
 @format_type(model.Function)
@@ -118,18 +116,17 @@ def ensure_empty_line_before_comment(code: model.Code):
 
         if child.predecessor is None:
             continue
-        if child.predecessor.predecessor is None:
-            continue
-        
-        if isinstance(child.predecessor.predecessor, model.Comment):
+        predecessor = child.predecessor
+
+        if predecessor.predecessor is None or isinstance(predecessor.predecessor, model.Comment):
             continue
 
-        assert type(child.predecessor) is model.StatementDelimiter
+        assert type(predecessor) is model.Literal
 
         # Inline comment, or already has an empty line before it.
-        if str(child.predecessor).count("\n") != 1:
+        if predecessor.value.count("\n") != 1:
             continue
-        child.predecessor.post_semicolon_whitespace.value = "\n" + child.predecessor.post_semicolon_whitespace.value
+        predecessor.value = "\n" + predecessor.value
 
 
 def normalize_indentation(composite: model.Composite):
@@ -161,46 +158,25 @@ def normalize_indentation(composite: model.Composite):
             continue
 
         if predecessor:
-            modified_element = predecessor
+            preceeding_literal = predecessor
         else:
-            modified_element = parent.predecessor
+            preceeding_literal = parent.predecessor
 
-        # Predecessor should be whitespace.
-        assert isinstance(modified_element, (model.Literal, model.StatementDelimiter))
+        # Predecessor should be whitespace and semicolons.
+        assert isinstance(preceeding_literal, model.Literal)
+
+        string = preceeding_literal.value
+        assert re.match(pattern=r"( \n;)*", string=string)
                             
-        if isinstance(modified_element, model.Literal):
+        # Remove current indentation (to be added later).
+        string = string.rstrip(" ")
 
-            whitespace = modified_element.value
-            assert whitespace.isspace() or whitespace == ""
+        # Ensure there is a newline at the end of the whitespace, so that the current element is on a new line.
+        if preceeding_literal.predecessor and "\n" not in string:
+            string += "\n"
 
-            # Remove current indentation (to be added later).
-            whitespace = whitespace.rstrip(" ")
-
-            # Ensure there is a newline at the end of the whitespace, so that the current element is on a new line.
-            if modified_element.predecessor and not whitespace.endswith("\n"):
-                whitespace += "\n"
-
-            # Add normalized indentation.
-            whitespace = whitespace + indent
-
-            modified_element.value = whitespace
-
-        else:
-            string = str(modified_element)
-
-            whitespace = modified_element.post_semicolon_whitespace.value
-
-            # Remove current indentation (to be added later).
-            whitespace = whitespace.rstrip(" ")
-
-            # Ensure there is a newline at the end of the whitespace, so that the current element is on a new line.
-            if modified_element.predecessor and not string.rstrip(" ").endswith("\n"):
-                whitespace += "\n"
-
-            # Add normalized indentation.
-            whitespace = whitespace + indent
-
-            modified_element.post_semicolon_whitespace.value = whitespace
+        # Add normalized indentation.
+        preceeding_literal.value = string + indent
 
 
 # def break_arguments(element: model.Composite, max_line_length: int = 120):
