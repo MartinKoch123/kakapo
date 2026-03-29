@@ -3,18 +3,16 @@ from pathlib import Path
 
 import pyparsing
 
-from kakapo import grammar, formatter
+from kakapo import formatter
 
 
 def format_file(file_path: Path):
     print(f'{file_path}')
     try:
-        file_model = grammar.parse_file(file_path)
+        formatter.format_file(file_path)
     except pyparsing.ParseException as e:
         print("SQUAWK!", e)
         return False
-    formatter.format_file(file_model)
-    file_path.write_text(str(file_model))
     return True
 
 

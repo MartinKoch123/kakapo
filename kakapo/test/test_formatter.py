@@ -159,10 +159,12 @@ def test_normalize_whitespace_in_delimited_list(input_: str, expected: str):
 @pytest.mark.parametrize(
     "input_, expected",
     (
-        ("disp('hello') %comment", "disp('hello') %comment"),
-        ("disp('hello')\n%comment", "disp('hello')\n\n%comment"),
-        ("disp('hello')\n\n%comment", "disp('hello')\n\n%comment"),
-        ("disp('hello')\n\n\n%comment", "disp('hello')\n\n\n%comment"),
+        ("a %comment", "a %comment"),
+        ("a\n%comment", "a\n\n%comment"),
+        ("a\n  %comment", "a\n\n  %comment"),
+        ("a;\n%comment", "a;\n\n%comment"),
+        ("a\n\n%comment", "a\n\n%comment"),
+        ("a\n\n\n%comment", "a\n\n\n%comment"),
     ),
 )
 def test_ensure_empty_line_before_comment(input_: str, expected: str):
@@ -178,6 +180,10 @@ def test_ensure_empty_line_before_comment(input_: str, expected: str):
         ("try\na\n b\n end", "try\n    a\n    b\nend"),
         ("if true\na;\n\nb\nend", "if true\n    a;\n\n    b\nend"),
         ("if 1\na\nelse\nb\nend", "if 1\n    a\nelse\n    b\nend"),
+        ("a = 1 % comment", "a = 1 % comment"),
+        ("if 1\na % com\nend", "if 1\n    a % com\nend"),
+        ("if 1\n% com\nend", "if 1\n    % com\nend"),
+        ("a;\n%c", "a;\n%c"),
     )
 )
 def test_normalize_indentation(string: str, expected: str):

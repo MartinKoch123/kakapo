@@ -1,7 +1,10 @@
+from pathlib import Path
 from unittest import case
 import re
 
-from . import model
+import pyparsing
+
+from . import model, grammar
 from .model import Literal
 
 
@@ -91,12 +94,15 @@ def ensure_function_end(function: model.Function):
 
 def normalize_trailing_whitespace(file: model.File):
     """Remove all trailing whitespace in a file and add a newline."""
-    file.trailing_delimiter = Literal("\n")
+    new_value = "\n"
+    if ";" in file.trailing_delimiter.value:
+        new_value = ";" + new_value
+    file.trailing_delimiter.value = new_value
 
 
 def normalize_leading_whitespace(file: model.File):
     """Remove all leading whitespace in a file."""
-    file.leading_delimiter = Literal("")
+    file.leading_delimiter.value = ""
 
 
 @format_type(model.Comment)
@@ -128,17 +134,25 @@ def ensure_empty_line_before_comment(code: model.Code):
         # Inline comment, or already has an empty line before it.
         if predecessor.value.count("\n") != 1:
             continue
-        predecessor.value = "\n" + predecessor.value
+        if ";" in predecessor.value:
+
+            # Add newline after last semicolon.
+            predecessor.regex_replace(r";(?=[^;]*$)", ";\n")
+        else:
+            predecessor.value = "\n" + predecessor.value
 
 
 def normalize_indentation(composite: model.Composite):
 
     for element, level in composite.descendants_and_indent():
 
-        if not isinstance(element, model.Construct) and (
-            not isinstance(element, model.Literal) or element.value != "end"
+        if (
+            not isinstance(element, model.Construct)
+            and (not isinstance(element, model.Literal) or element.value != "end")
         ):
             continue
+        # if isinstance(element, model.Comment):
+        #     continue
 
         parent = element.parent
         predecessor = element.predecessor
@@ -169,10 +183,15 @@ def normalize_indentation(composite: model.Composite):
         string = preceeding_literal.value
         assert re.match(pattern=r"( \n;)*", string=string)
 
+        # Skip inline comments.
+        if isinstance(element, model.Comment) and "\n" not in string:
+            continue
+
         # Remove current indentation (to be added later).
         string = string.rstrip(" ")
 
-        # Ensure there is a newline at the end of the whitespace, so that the current element is on a new line.
+        # Ensure there is a newline at the end of the whitespace, so that the current
+        # element is on a new line (unless it's a comment).
         if preceeding_literal.predecessor and "\n" not in string:
             string += "\n"
 
@@ -245,7 +264,7 @@ def add_empty_lines_around_block_body(block: model.Block):
 #         args_list[1][3] = " ...\n" + outer_indent
 
 
-def format_file(file: model.File):
+def format_model(file: model.File):
     normalize_whitespace_in_delimited_list(file)
     normalize_whitespace_in_parenthesized(file)
     normalize_whitespace_in_assignment(file)
@@ -263,3 +282,16 @@ def format_file(file: model.File):
     ensure_empty_line_before_comment(file)
     ensure_comment_leading_space(file)
     # break_arguments(file)
+
+
+def format_string(string: str):
+    file_model = grammar.parse_string(string)
+    format_model(file_model)
+    # normalize_indentation(file_model)
+    return str(file_model)
+
+
+def format_file(file_path: Path):
+    string = file_path.read_text()
+    string = format_string(string)
+    file_path.write_text(string)
