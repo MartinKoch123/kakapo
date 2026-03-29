@@ -159,7 +159,6 @@ class Composite(Component):
 
     @classmethod
     def from_tokens(cls, tokens: Sequence):
-        print(tokens)
         return cls(*tokens)
 
 

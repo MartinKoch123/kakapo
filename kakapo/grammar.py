@@ -31,6 +31,7 @@ from pyparsing import (
     Word,
     ZeroOrMore,
 )
+from pyparsing.tools.cvt_pyparsing_pep8_names import pre_pep8_arg_name, pre_pep8_method_name
 
 from . import model
 
@@ -167,7 +168,7 @@ class Block(ParserElement):
     def __init__(
         self,
         name: str,
-        content: ParserElement,
+        body: ParserElement,
         head: ParserElement | None = None,
         optional_head: bool = False,
         optional_head_delimiter: bool = False,
@@ -176,9 +177,9 @@ class Block(ParserElement):
         super().__init__()
 
         if optional_head_delimiter:
-            head_delimiter = element_delimiter | empty_string()
+            pre_head_delimiter = element_delimiter | empty_string()
         else:
-            head_delimiter = element_delimiter
+            pre_head_delimiter = element_delimiter
 
         end_placeholder = empty_string() + nothing()
 
@@ -191,18 +192,20 @@ class Block(ParserElement):
 
         if head is None:
             head_parser = nothing(2)
+            pre_body_delimiter = regex_literal(r"[ \t\n;]*")
         else:
             if optional_head:
-                head_parser = (head_delimiter + head) | nothing(2)
+                head_parser = (pre_head_delimiter + head) | nothing(2)
             else:
-                head_parser = head_delimiter + head
+                head_parser = pre_head_delimiter + head
+            pre_body_delimiter = statement_delimiter
 
-        content_parser = (statement_delimiter + content) | nothing(2)
+        body_parser = (pre_body_delimiter + body) | nothing(2)
 
         self.parser = (
             Keyword(name).add_parse_action(model.Literal.from_tokens)
             + head_parser
-            + content_parser
+            + body_parser
             + end_element
         ) # fmt: skip
 
@@ -433,16 +436,16 @@ code = Forward()
 if_ = Block(
     name="if",
     head=expression_statement,
-    content=code,
+    body=code,
     end=True,
 )
 
-else_ = Block(name="else", content=code, end=False)  # End belongs to if-block.
+else_ = Block(name="else", body=code, end=False)  # End belongs to if-block.
 
 else_if = Block(
     name="elseif",
     head=expression_statement,
-    content=code,
+    body=code,
     end=False,  # End belongs to if-block.
 )
 
@@ -450,17 +453,17 @@ else_if = Block(
 for_ = Block(
     name="for",
     head=assignment_statement,
-    content=code,
+    body=code,
     end=True,
 )
 """For-loop code block."""
 
 
-while_ = Block(name="while", head=expression_statement, content=code)
+while_ = Block(name="while", head=expression_statement, body=code)
 """While-loop code block."""
 
 
-function = Block(name="function", head=statement, content=code, end="optional")
+function = Block(name="function", head=statement, body=code, end="optional")
 """Function definition block."""
 
 
@@ -468,42 +471,42 @@ catch = Block(
     name="catch",
     head=identifier,
     optional_head=True,
-    content=code,
+    body=code,
     end=False,
 )
 """'catch'-block of a try-catch block."""
 
 
-try_ = Block(name="try", content=code)
+try_ = Block(name="try", body=code)
 
-switch_case = Block(name="case", head=expression_statement, content=code, end=False)
+switch_case = Block(name="case", head=expression_statement, body=code, end=False)
 """'case'-block of a switch statement."""
 
 
-switch_otherwise = Block(name="otherwise", content=code, end=False)
+switch_otherwise = Block(name="otherwise", body=code, end=False)
 """'otherwise'-block of a switch statement."""
 
 
-switch = Block(name="switch", head=expression_statement, content=code)
+switch = Block(name="switch", head=expression_statement, body=code)
 """Switch statement code block"""
 
 classdef = Block(
     name="classdef",
     head=identifier,
-    content=code,
+    body=code,
 )
 
 properties = Block(
     name="properties",
     head=arguments_list,
-    content=code,
+    body=code,
     optional_head=True,
 )
 
 methods = Block(
     name="methods",
     head=arguments_list,
-    content=code,
+    body=code,
     optional_head=True,
     optional_head_delimiter=True
 )

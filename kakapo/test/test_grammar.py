@@ -325,7 +325,8 @@ def test_code(string):
     "string",
     (
         "else",
-        "else \n a = 1"
+        "else \n a = 1",
+        "else a",
     ),
 )
 def test_else(string):
