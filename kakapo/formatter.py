@@ -153,15 +153,6 @@ def normalize_indentation(composite: model.Composite):
         if element_is_block_head:
             continue
 
-        # # Workaround for for elseif. #TODO refactor model.If
-        # own_index = parent.index_of_child(element)
-        # if (
-        #     own_index > 1
-        #     and isinstance(parent[own_index - 2], model.Leaf)
-        #     and parent[own_index - 2].value == "elseif"
-        # ):
-        #     continue
-
         assert level >= 0
         indent = level * INDENT
 

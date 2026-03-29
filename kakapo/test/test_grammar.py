@@ -374,6 +374,7 @@ def test_properties(string):
     (
         "methods \n end",
         "methods \n function a() \n end \n end",
+        "methods(Static)\nend",
     )
 )
 def test_methods(string):

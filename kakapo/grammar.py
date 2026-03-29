@@ -169,9 +169,15 @@ class Block(ParserElement):
         content: ParserElement,
         head: ParserElement | None = None,
         optional_head: bool = False,
+        optional_head_delimiter: bool = False,
         end: bool | str = True,
     ):
         super().__init__()
+
+        if optional_head_delimiter:
+            head_delimiter = element_delimiter | empty_string()
+        else:
+            head_delimiter = element_delimiter
 
         end_placeholder = empty_string() + nothing()
 
@@ -186,9 +192,9 @@ class Block(ParserElement):
             head_parser = nothing(2)
         else:
             if optional_head:
-                head_parser = (element_delimiter + head) | nothing(2)
+                head_parser = (head_delimiter + head) | nothing(2)
             else:
-                head_parser = element_delimiter + head
+                head_parser = head_delimiter + head
 
         content_parser = (statement_delimiter + content) | nothing(2)
 
@@ -489,6 +495,7 @@ methods = Block(
     head=arguments_list,
     content=code,
     optional_head=True,
+    optional_head_delimiter=True
 )
 
 command_identifier = Combine(identifier + Opt(".*"))
