@@ -218,16 +218,6 @@ def empty_string(n: int = 1):
     )
 
 
-def or_none(expr: ParserElement):
-    """Parse expr or return Missing if not found."""
-    return Opt(expr, default=model.Missing())
-
-
-def or_empty(expr: ParserElement):
-    """Parse expr or return an empty Literal if not found."""
-    return Opt(expr, default=model.Literal(""))
-
-
 def join_strings(s, loc, toks):
     return model.Literal("".join(str(t) for t in toks))
 
@@ -274,7 +264,7 @@ ws = Combine(
 
 
 """Optional white space"""
-ows = Opt(ws, default=model.Literal("")).parse_with_tabs()
+ows = (ws | empty_string()).parse_with_tabs()
 
 
 element_delimiter = Combine(
@@ -355,7 +345,7 @@ assignment_statement = Forward()
 argument_brackets = (("(", ")"), ("{", "}"))
 argument = assignment_statement | expression | Leaf(":")
 arguments_list = (
-    or_none(Leaf("."))
+    (Leaf(".") | nothing(1))
     + parenthesized(
         DelimitedList(argument, delimiter=",", min_elements=0), 
         brackets=argument_brackets,
@@ -363,7 +353,10 @@ arguments_list = (
 ) # fmt: skip
 
 """A variable or a function call with or without arguments. Includes nested calls."""
-call << (identifier + or_none(arguments_list[1, ...]))
+call << (
+    identifier 
+    + (arguments_list[1, ...] | nothing(1))
+) # fmt: skip
 
 """
 Anonymous function definition
@@ -371,7 +364,13 @@ Examples:
  - @(x) x + 1
  - @mean
 """
-anonymous_function = Leaf("@") + ows + or_none(arguments_list) + ows + expression
+anonymous_function = (
+    Leaf("@") 
+    + ows 
+    + (arguments_list | nothing(1)) 
+    + ows 
+    + expression
+)
 
 # number = common.number.set_parse_action(model.Literal.from_tokens)
 number = Regex(r"[-+\d][\d.eE]*").set_parse_action(model.Literal.from_tokens)
@@ -487,8 +486,9 @@ properties = Block(
 
 methods = Block(
     name="methods",
-    head=or_none(arguments_list),
+    head=arguments_list,
     content=code,
+    optional_head=True,
 )
 
 command_identifier = Combine(identifier + Opt(".*"))
@@ -522,7 +522,7 @@ code << code_element + ZeroOrMore(statement_delimiter + code_element)
 
 file = (
     regex_literal(r"[ \t\n;]*") 
-    + or_none(code) 
+    + (code | nothing(1)) 
     + (regex_literal(r"[ \t\n;]*") | (empty_string() + StringEnd())) # Regex fails mysteriously at string end.
 )
 """A file consisting of code wrapped by optional white space."""
@@ -578,14 +578,15 @@ def parse_string(s: str) -> model.File:
 
     file_: model.File = parse_result[0]
     for element in itertools.chain([file_], file_.descendants()):
-        if isinstance(element, model.Composite):
-            children = list(element)
-            for i, child in enumerate(children):
-                child.parent = element
-                if i > 0:
-                    child.predecessor = children[i - 1]
-                if i < len(children) - 1:
-                    child.successor = children[i + 1]
+        if not isinstance(element, model.Composite):
+            continue
+        children = list(element)
+        for i, child in enumerate(children):
+            child.parent = element
+            if i > 0:
+                child.predecessor = children[i - 1]
+            if i < len(children) - 1:
+                child.successor = children[i + 1]
 
     return file_  # type: ignore
 
