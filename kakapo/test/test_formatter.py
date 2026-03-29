@@ -38,8 +38,8 @@ def test_normalize_whitespace_in_assignment(input_: str, expected: str):
 @pytest.mark.parametrize(
     "input_, expected",
     [
-        ("a = 1 ;", "a = 1;"),
-        ("mean([1, 2])\t  ;", "mean([1, 2]);"),
+        ("a = 1 ; a", "a = 1; a"),
+        ("mean([1, 2])\t  ;a", "mean([1, 2]);a"),
     ],
 )
 def test_remove_white_space_before_semicolon(input_: str, expected: str):
@@ -50,11 +50,11 @@ def test_remove_white_space_before_semicolon(input_: str, expected: str):
 @pytest.mark.parametrize(
     "input_, expected",
     [
-        ("if true\n a = 1\n end  ;", "if true\n a = 1\n end"),
-        ("function func()\n clear\n end;", "function func()\n clear\n end"),
+        ("if true\n a = 1\n end  ; a", "if true\n a = 1\n end a"),
+        ("function func()\n clear\n end; a", "function func()\n clear\n end a"),
     ],
 )
-def test_remove_white_space_and_semicolon_after_end_keyword(input_: str, expected: str):
+def test_remove_post_block_whitespace_and_semicolon(input_: str, expected: str):
     actual = format(
         formatter.remove_post_block_whitespace_and_semicolon, input_
     )

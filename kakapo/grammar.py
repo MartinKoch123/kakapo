@@ -281,7 +281,7 @@ statement_delimiter = (
     | regex_literal(r"[ \t]*") + empty_string() + ows + FollowedBy(Literal("%"))
 )
 
-end_delimiter = Regex(r"[ \t\n;]+")
+end_delimiter = regex_literal(r"[ \t\n;]+")
 
 operator = Or(OPERATORS)
 
