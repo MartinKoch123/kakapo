@@ -40,8 +40,8 @@ def normalize_whitespace_in_parenthesized(parenthesized: model.Parenthesized):
     parenthesized.whitespace_after_content = Literal("")
 
 
-@format_type(model.OutputArguments)
-def normalize_whitespace_in_assignment(output_arguments: model.OutputArguments):
+@format_type(model.AssignmentTarget)
+def normalize_whitespace_in_assignment(output_arguments: model.AssignmentTarget):
     """Ensure equality sign of assignment is surrounded by single spaces."""
     output_arguments.whitespace_before_equal_sign = Literal(" ")
     output_arguments.whitespace_after_equal_sign = Literal(" ")
@@ -49,7 +49,7 @@ def normalize_whitespace_in_assignment(output_arguments: model.OutputArguments):
 
 @format_type(model.Block)
 def remove_post_block_whitespace_and_semicolon(block: model.Block):
-    if not isinstance(block.successor, model.ConstructDelimiter):
+    if not isinstance(block.successor, model.StatementDelimiter):
         return
     block.successor.pre_semicolon_whitespace = Literal("")
     block.successor.semicolon = Literal("")
@@ -64,7 +64,7 @@ def remove_post_block_head_whitespace_and_semicolon(block: model.Block):
 def remove_white_space_and_semicolon_after_keyword(code: model.Composite):
     for element in code.descendants():
         match element:
-            case model.ConstructDelimiter(
+            case model.StatementDelimiter(
                 predecessor=model.Statement(
                     body=Literal(value="return" | "break" | "continue")
                 )
@@ -77,8 +77,8 @@ def remove_white_space_and_semicolon_after_keyword(code: model.Composite):
                     element.post_semicolon_whitespace = Literal(" ")
 
 
-@format_type(model.ConstructDelimiter)
-def remove_white_space_before_semicolon(statement: model.ConstructDelimiter):
+@format_type(model.StatementDelimiter)
+def remove_white_space_before_semicolon(statement: model.StatementDelimiter):
     statement.pre_semicolon_whitespace = Literal("")
 
 
@@ -123,7 +123,7 @@ def ensure_empty_line_before_comment(code: model.Code):
         if isinstance(child.predecessor.predecessor, model.Comment):
             continue
 
-        assert type(child.predecessor) is model.ConstructDelimiter
+        assert type(child.predecessor) is model.StatementDelimiter
 
         # Inline comment, or already has an empty line before it.
         if str(child.predecessor).count("\n") != 1:

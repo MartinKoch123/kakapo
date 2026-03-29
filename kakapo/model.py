@@ -184,7 +184,7 @@ class ArgumentsList(ElementsList):
 
 
 @dataclass
-class OutputArguments(Composite):
+class AssignmentTarget(Composite):
     elements_list: DelimitedList
     whitespace_before_equal_sign: Literal
     equal_sign: Literal
@@ -225,7 +225,7 @@ class Parenthesized(Composite):
 
 @dataclass
 class Statement(Composite, Construct):
-    output_arguments: OutputArguments | Missing
+    output_arguments: AssignmentTarget | Missing
     body: Component
 
 
@@ -266,14 +266,14 @@ class Block(Composite, Construct):
     name: Literal
     pre_head_delimiter: Literal
     head: Component | Missing
-    pre_body_delimiter: ConstructDelimiter
+    pre_body_delimiter: StatementDelimiter
     body: Component
     pre_end_delimiter: Literal
     end: Literal | Missing
 
 
 @dataclass
-class ConstructDelimiter(Composite):
+class StatementDelimiter(Composite):
     pre_semicolon_whitespace: Literal
     semicolon: Literal
     post_semicolon_whitespace: Literal

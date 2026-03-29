@@ -297,8 +297,8 @@ def test_function(string):
         "\n",
     )
 )
-def test_construct_delimiter(string):
-    model = grammar.construct_delimiter.parse_string(string)[0]
+def test_statement_delimiter(string):
+    model = grammar.statement_delimiter.parse_string(string)[0]
     expected = str(model)
     assert expected == string
 

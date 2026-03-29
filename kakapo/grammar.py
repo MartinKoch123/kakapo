@@ -1,9 +1,5 @@
 """
 Parsing logic for MATLAB code.
-
-Terminology:
- - Block: Code delimited by a block keyword and the 'end' keyword, e.g. function, if, for.
- - Construct: Unit of code which can stand on its own, e.g. statements, blocks, comments.
 """
 
 # pyright: reportUnusedExpression=false
@@ -19,7 +15,6 @@ from pyparsing import (
     common,
     empty,
     Empty,
-    line_end,
     Literal,
     Opt,
     Or,
@@ -195,7 +190,7 @@ class Block(ParserElement):
             else:
                 head_parser = element_delimiter + head
 
-        content_parser = (construct_delimiter + content) | nothing(2)
+        content_parser = (statement_delimiter + content) | nothing(2)
 
         self.parser = (
             Leaf(name)
@@ -235,10 +230,6 @@ def or_empty(expr: ParserElement):
 
 def join_strings(s, loc, toks):
     return model.Literal("".join(str(t) for t in toks))
-
-
-def construct_list(expr: ParserElement) -> ParserElement:
-    return expr + ZeroOrMore(construct_delimiter + expr)
 
 
 def regex_literal(pattern: str) -> ParserElement:
@@ -287,15 +278,14 @@ ows = Opt(ws, default=model.Literal("")).parse_with_tabs()
 
 
 element_delimiter = Combine(
-    (White(" \t") | (Literal("...") + Regex(r"[ \t]*\n?[ \t]*")))[1, ...]
-).parse_with_tabs()
+    (
+        White(" \t") 
+        | (Literal("...") + Regex(r"[ \t]*\n?[ \t]*"))
+    )[1, ...]
+).parse_with_tabs() # fmt: skip
 
-optional_element_delimiter = Opt(
-    element_delimiter, default=model.Literal("")
-).parse_with_tabs()
 
-
-construct_delimiter = (
+statement_delimiter = (
     ows + Leaf(";") + ows
     | regex_literal(r"[ \t]*\n") + empty_string() + ows
     | regex_literal(r"[ \t]*") + empty_string() + ows + FollowedBy(Literal("%"))
@@ -349,7 +339,7 @@ array = parenthesized(
 
 call = Forward()
 
-output_arguments = (
+assignment_target = (
     parenthesized(
         DelimitedList(call, delimiter=","),
         brackets=(("[", "]"),),
@@ -360,10 +350,10 @@ output_arguments = (
     + ows
 )
 
-output_statement = Forward()
+assignment_statement = Forward()
 
 argument_brackets = (("(", ")"), ("{", "}"))
-argument = output_statement | expression | Leaf(":")
+argument = assignment_statement | expression | Leaf(":")
 arguments_list = (
     or_none(Leaf("."))
     + parenthesized(
@@ -419,15 +409,15 @@ keyword = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 statement_core = expression | keyword
 """An assignment or an expression with either no result or an unused result."""
 
-no_output_statement = nothing(1) + statement_core
-output_statement << (output_arguments + statement_core)
-statement = output_statement | no_output_statement
+expression_statement = nothing(1) + statement_core
+assignment_statement << (assignment_target + statement_core)
+statement = assignment_statement | expression_statement
 
 code = Forward()
 
 if_ = Block(
     name="if",
-    head=no_output_statement,
+    head=expression_statement,
     content=code,
     end=True,
 )
@@ -436,7 +426,7 @@ else_ = Block(name="else", content=code, end=False)  # End belongs to if-block.
 
 else_if = Block(
     name="elseif",
-    head=no_output_statement,
+    head=expression_statement,
     content=code,
     end=False,  # End belongs to if-block.
 )
@@ -444,14 +434,14 @@ else_if = Block(
 
 for_ = Block(
     name="for",
-    head=output_statement,
+    head=assignment_statement,
     content=code,
     end=True,
 )
 """For-loop code block."""
 
 
-while_ = Block(name="while", head=no_output_statement, content=code)
+while_ = Block(name="while", head=expression_statement, content=code)
 """While-loop code block."""
 
 
@@ -471,7 +461,7 @@ catch = Block(
 
 try_ = Block(name="try", content=code)
 
-switch_case = Block(name="case", head=no_output_statement, content=code, end=False)
+switch_case = Block(name="case", head=expression_statement, content=code, end=False)
 """'case'-block of a switch statement."""
 
 
@@ -479,7 +469,7 @@ switch_otherwise = Block(name="otherwise", content=code, end=False)
 """'otherwise'-block of a switch statement."""
 
 
-switch = Block(name="switch", head=no_output_statement, content=code)
+switch = Block(name="switch", head=expression_statement, content=code)
 """Switch statement code block"""
 
 classdef = Block(
@@ -505,7 +495,7 @@ command_identifier = Combine(identifier + Opt(".*"))
 command = (
     command_identifier
     + ZeroOrMore(element_delimiter + command_identifier)
-    + (StringEnd() | FollowedBy(construct_delimiter))
+    + (StringEnd() | FollowedBy(statement_delimiter))
 )
 
 any_block = (
@@ -525,7 +515,9 @@ any_block = (
     | while_
 )
 
-code << construct_list(command | statement | comment | any_block)
+
+code_element = command | statement | comment | any_block
+code << code_element + ZeroOrMore(statement_delimiter + code_element)
 
 
 file = (
@@ -544,6 +536,7 @@ parse_actions = {
     anonymous_function: model.AnonymousFunction,
     array: model.Array,
     arguments_list: model.ArgumentsList,
+    expression_statement: model.Statement,
     call: model.Call,
     catch: model.Catch,
     classdef: model.Classdef,
@@ -551,7 +544,7 @@ parse_actions = {
     command: model.Command,
     command_identifier: model.Literal,
     comment: model.Comment,
-    construct_delimiter: model.ConstructDelimiter,
+    statement_delimiter: model.StatementDelimiter,
     element_delimiter: model.Literal,
     else_: model.Else,
     else_if: model.ElseIf,
@@ -561,10 +554,9 @@ parse_actions = {
     identifier: model.Literal,
     if_: model.If,
     methods: model.Methods,
-    no_output_statement: model.Statement,
     operation: model.Operation,
-    output_arguments: model.OutputArguments,
-    output_statement: model.Statement,
+    assignment_target: model.AssignmentTarget,
+    assignment_statement: model.Statement,
     properties: model.Properties,
     single_element_operation: model.SingleElementOperation,
     string: model.Literal,
