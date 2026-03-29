@@ -183,5 +183,27 @@ def test_normalize_indentation(string: str, expected: str):
     assert actual == expected
 
 
+@pytest.mark.parametrize(
+    "string, expected",
+    (
+        ("a\n\nb", "a\nb"),
+    )
+)
+def test_remove_excess_newlines(string: str, expected: str):
+    actual = format(formatter.remove_excess_empty_lines, string)
+    assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "string, expected",
+    (
+        ("function a\nend\nfunction b\nend", "function a\nend\n\nfunction b\nend"),
+    )
+)
+def test_add_empty_lines_before_and_after_block(string: str, expected: str):
+    actual = format(formatter.add_empty_lines_before_and_after_blocks, string)
+    assert actual == expected
+
+
 if __name__ == "__main__":
     pytest.main()

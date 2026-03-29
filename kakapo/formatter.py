@@ -118,7 +118,9 @@ def ensure_empty_line_before_comment(code: model.Code):
             continue
         predecessor = child.predecessor
 
-        if predecessor.predecessor is None or isinstance(predecessor.predecessor, model.Comment):
+        if predecessor.predecessor is None or isinstance(
+            predecessor.predecessor, model.Comment
+        ):
             continue
 
         assert type(predecessor) is model.Literal
@@ -133,9 +135,8 @@ def normalize_indentation(composite: model.Composite):
 
     for element, level in composite.descendants_and_indent():
 
-        if (
-            not isinstance(element, model.Construct)
-            and (not isinstance(element, model.Literal) or element.value != "end")
+        if not isinstance(element, model.Construct) and (
+            not isinstance(element, model.Literal) or element.value != "end"
         ):
             continue
 
@@ -167,7 +168,7 @@ def normalize_indentation(composite: model.Composite):
 
         string = preceeding_literal.value
         assert re.match(pattern=r"( \n;)*", string=string)
-                            
+
         # Remove current indentation (to be added later).
         string = string.rstrip(" ")
 
@@ -177,6 +178,39 @@ def normalize_indentation(composite: model.Composite):
 
         # Add normalized indentation.
         preceeding_literal.value = string + indent
+
+
+@format_type(model.Literal)
+def remove_excess_empty_lines(literal: model.Literal):
+    literal.regex_replace(pattern=r"\n\s*\n", repl=r"\n\n")
+
+
+@format_type(model.Literal)
+def add_empty_lines_before_and_after_blocks(literal: model.Literal):
+    match literal:
+        case model.Literal(
+            predecessor=model.Block(
+                name=model.Literal("classdef" | "function" | "methods" | "properties" | "arguments")
+            )
+        ):
+            while literal.value.count("\n") < 2:
+                literal.value += "\n"
+        case model.Literal(
+            successor=model.Block(
+                name=model.Literal("classdef" | "function" | "methods" | "properties" | "arguments")
+            )
+        ):
+            while literal.value.count("\n") < 2:
+                literal.value += "\n"
+
+
+@format_type(model.Block)
+def add_empty_lines_around_block_body(block: model.Block):
+    if block.name not in ["classdef", "methods"]:
+        return
+    for delimiter in (block.pre_body_delimiter, block.pre_end_delimiter):
+        while delimiter.value.count("\n") < 2:
+            delimiter.value += "\n"
 
 
 # def break_arguments(element: model.Composite, max_line_length: int = 120):
@@ -219,6 +253,9 @@ def format_file(file: model.File):
     remove_post_block_head_whitespace_and_semicolon(file)
     remove_white_space_before_semicolon(file)
     remove_white_space_and_semicolon_after_keyword(file)
+    remove_excess_empty_lines(file)
+    add_empty_lines_before_and_after_blocks(file)
+    add_empty_lines_around_block_body(file)
     normalize_indentation(file)
     ensure_function_end(file)
     normalize_leading_whitespace(file)
