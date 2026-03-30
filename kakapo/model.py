@@ -398,5 +398,9 @@ class ArgumentDefinitionGroup(VariableLengthComposite):
     pass
 
 
+class Arguments(Block):
+    pass
+
+
 def none_or_whitespace(x) -> bool:
     return x is None or isinstance(x, str) and (x.isspace() or x == "")

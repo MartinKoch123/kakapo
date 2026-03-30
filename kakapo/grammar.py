@@ -513,6 +513,11 @@ properties = Block(
     optional_head=True,
 )
 
+arguments = Block(
+    name="arguments",
+    body=argument_definition_group,
+)
+
 methods = Block(
     name="methods",
     head=arguments_list,
@@ -529,7 +534,8 @@ command = (
 )
 
 any_block = (
-    catch
+    arguments
+    | catch
     | classdef
     | else_
     | else_if
@@ -566,6 +572,7 @@ parse_actions = {
     anonymous_function: model.AnonymousFunction,
     argument_definition: model.ArgumentDefinition,
     argument_definition_group: model.ArgumentDefinitionGroup,
+    arguments: model.Arguments,
     arguments_list: model.ArgumentsList,
     array: model.Array,
     expression_statement: model.Statement,

@@ -18,7 +18,7 @@ def assert_parsing_fails(element: pp.ParserElement, string: str):
 
 def assert_parsing_returns_unmodified_string(element: pp.ParserElement, string: str):
     result = element.parse_string(string, parse_all=True)
-    assert string == str(result[0])
+    assert str(result[0]) == string
 
 
 @pytest.mark.parametrize("string", [" ", "\t", "\n", "\t\n"])
@@ -544,6 +544,21 @@ def test_argument_definition_group(string):
 )
 def test_properties(string):
     assert_parsing_returns_unmodified_string(grammar.properties, string)
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "arguments end",
+        "arguments\n end",
+        "arguments\n a;b end",
+        "arguments\n a\nb\nend",
+        "arguments\n a (1, 1) double\nend",
+        "arguments\n a (1, 1) double; b struct\nend",
+    ),
+)
+def test_arguments(string):
+    assert_parsing_returns_unmodified_string(grammar.arguments, string)
 
 
 if __name__ == "__main__":
