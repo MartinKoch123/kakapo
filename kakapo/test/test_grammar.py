@@ -108,7 +108,10 @@ def test_identifier_error(string):
 @pytest.mark.parametrize(
     "string, expected",
     [
-        ("import abc", model.Command([model.Literal(s) for s in ["import", " ", "abc"]])),
+        (
+            "import abc",
+            model.Command([model.Literal(s) for s in ["import", " ", "abc"]]),
+        ),
         (
             "import ab.cd.ef",
             model.Command([model.Literal(s) for s in ["import", " ", "ab.cd.ef"]]),
@@ -127,7 +130,10 @@ def test_import(string, expected):
 @pytest.mark.parametrize(
     "string, expected",
     [
-        ("% hello world", model.Comment(model.Literal("%"), model.Literal(" hello world"))),
+        (
+            "% hello world",
+            model.Comment(model.Literal("%"), model.Literal(" hello world")),
+        ),
         ("%", model.Comment(model.Literal("%"), model.Literal(""))),
     ],
 )
@@ -147,7 +153,9 @@ def test_array_delimiter(string):
         ("clear", model.Command([model.Literal("clear")])),
         (
             "clear a123 b_",
-            model.Command([model.Literal(s) for s in ["clear", " ", "a123", " ", "b_"]]),
+            model.Command(
+                [model.Literal(s) for s in ["clear", " ", "a123", " ", "b_"]]
+            ),
         ),
         # ("command -flag arg", model.Command(["command", " ", "-flag", " ", "arg"]))
     ],
@@ -224,9 +232,7 @@ def test_string(input_, expected):
     ),
 )
 def test_call(string):
-    model = grammar.call.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
+    assert_parsing_returns_unmodified_string(grammar.call, string)
 
 
 @pytest.mark.parametrize(
@@ -239,9 +245,7 @@ def test_call(string):
     ),
 )
 def test_operation(string):
-    model = grammar.operation.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
+    assert_parsing_returns_unmodified_string(grammar.operation, string)
 
 
 @pytest.mark.parametrize(
@@ -255,9 +259,7 @@ def test_operation(string):
     ),
 )
 def test_anonymous_function(string):
-    model = grammar.anonymous_function.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
+    assert_parsing_returns_unmodified_string(grammar.anonymous_function, string)
 
 
 @pytest.mark.parametrize(
@@ -269,9 +271,7 @@ def test_anonymous_function(string):
     ),
 )
 def test_array(string):
-    model = grammar.array.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
+    assert_parsing_returns_unmodified_string(grammar.array, string)
 
 
 @pytest.mark.parametrize(
@@ -282,21 +282,7 @@ def test_array(string):
     ),
 )
 def test_function(string):
-    model = grammar.function.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
-
-
-# @pytest.mark.parametrize(
-#     "string",
-#     (
-#         "",
-#     )
-# )
-# def test_arguments_list(string):
-#     model = grammar.arguments_list.parse_string(string)[0]
-#     expected = str(model)
-#     assert expected == string
+    assert_parsing_returns_unmodified_string(grammar.function, string)
 
 
 @pytest.mark.parametrize(
@@ -305,12 +291,11 @@ def test_function(string):
         ";",
         " ;\n",
         "\n",
-    )
+    ),
 )
 def test_statement_delimiter(string):
-    model = grammar.statement_delimiter.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
+    assert_parsing_returns_unmodified_string(grammar.statement_delimiter, string)
+
 
 @pytest.mark.parametrize(
     "string",
@@ -323,9 +308,7 @@ def test_statement_delimiter(string):
     ),
 )
 def test_code(string):
-    model = grammar.code.parse_string(string, parse_all=True)[0]
-    expected = str(model)
-    assert expected == string
+    assert_parsing_returns_unmodified_string(grammar.code, string)
 
 
 @pytest.mark.parametrize(
@@ -337,8 +320,7 @@ def test_code(string):
     ),
 )
 def test_else(string):
-    model = grammar.else_.parse_string(string, parse_all=True)[0]
-    assert str(model) == string
+    assert_parsing_returns_unmodified_string(grammar.else_, string)
 
 
 @pytest.mark.parametrize(
@@ -349,8 +331,7 @@ def test_else(string):
     ),
 )
 def test_else_if(string):
-    model = grammar.else_if.parse_string(string)[0]
-    assert str(model) == string
+    assert_parsing_returns_unmodified_string(grammar.else_if, string)
 
 
 @pytest.mark.parametrize(
@@ -362,11 +343,7 @@ def test_else_if(string):
     ),
 )
 def test_if(string):
-    model = grammar.if_.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
-
-
+    assert_parsing_returns_unmodified_string(grammar.if_, string)
 
 
 @pytest.mark.parametrize(
@@ -375,12 +352,10 @@ def test_if(string):
         "methods \n end",
         "methods \n function a() \n end \n end",
         "methods(Static)\nend",
-    )
+    ),
 )
 def test_methods(string):
-    model = grammar.methods.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
+    assert_parsing_returns_unmodified_string(grammar.methods, string)
 
 
 @pytest.mark.parametrize(
@@ -389,24 +364,21 @@ def test_methods(string):
         "classdef A end",
         "classdef A \n properties \n a \n end \n end",
         "classdef A \n methods \n a \n end \n end",
-    )
+    ),
 )
 def test_classdef(string):
-    model = grammar.classdef.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
+    assert_parsing_returns_unmodified_string(grammar.classdef, string)
+
 
 @pytest.mark.parametrize(
     "string",
     (
         "switch x\n end",
         "switch x\n case 1\n otherwise \n b \n end",
-    )
+    ),
 )
 def test_switch(string):
-    model = grammar.switch.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
+    assert_parsing_returns_unmodified_string(grammar.switch, string)
 
 
 @pytest.mark.parametrize(
@@ -415,11 +387,10 @@ def test_switch(string):
         "catch",
         "catch \n a = 1",
         "catch exc \n a = 1",
-    )
+    ),
 )
 def test_catch(string):
-    model = grammar.catch.parse_string(string)[0]
-    assert str(model) == string
+    assert_parsing_returns_unmodified_string(grammar.catch, string)
 
 
 @pytest.mark.parametrize(
@@ -429,11 +400,10 @@ def test_catch(string):
         "try \n a \n end",
         "try \n catch \n end",
         "try \n a; catch \n b = 1 \n end",
-    )
+    ),
 )
 def test_try(string):
-    model = grammar.try_.parse_string(string)[0]
-    assert str(model) == string
+    assert_parsing_returns_unmodified_string(grammar.try_, string)
 
 
 @pytest.mark.parametrize(
@@ -445,8 +415,7 @@ def test_try(string):
     ),
 )
 def test_for(string):
-    model = grammar.for_.parse_string(string)[0]
-    assert str(model) == string
+    assert_parsing_returns_unmodified_string(grammar.for_, string)
 
 
 @pytest.mark.parametrize(
@@ -458,22 +427,15 @@ def test_for(string):
     ),
 )
 def test_while(string):
-    model = grammar.while_.parse_string(string)[0]
-    assert str(model) == string
+    assert_parsing_returns_unmodified_string(grammar.while_, string)
 
 
 @pytest.mark.parametrize(
     "string",
-    (
-        "",
-        " a = 1 \n b = 2",
-        "a = 1 \n b = 2  ",
-        " ;; a = 1 ;\n "
-    ),
+    ("", " a = 1 \n b = 2", "a = 1 \n b = 2  ", " ;; a = 1 ;\n "),
 )
 def test_file(string):
-    model = grammar.file.parse_string(string, parse_all=True)[0]
-    assert str(model) == string
+    assert_parsing_returns_unmodified_string(grammar.file, string)
 
 
 @pytest.mark.parametrize(
@@ -511,8 +473,7 @@ def test_postfix_operation(string):
         "a b",
         "a (1, 1) b",
         "a (1, :, 1) b.c.d",
-
-    )
+    ),
 )
 def test_argument_definition(string):
     assert_parsing_returns_unmodified_string(grammar.argument_definition, string)
@@ -524,8 +485,8 @@ def test_argument_definition(string):
         "a",
         "a\nb",
         "a;b\nc",
-        "a (1, 2) double\nb string; cde (:, :, 3) a someclass",
-    )
+        "a (1, 2) double\nb string; cde (:, :, 3) someclass",
+    ),
 )
 def test_argument_definition_group(string):
     assert_parsing_returns_unmodified_string(grammar.argument_definition_group, string)
