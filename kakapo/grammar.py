@@ -144,14 +144,7 @@ class DelimitedList(ParserElement):
             lambda s, loc, toks: model.Literal("".join(str(t) for t in toks))
         )
         min_sub_exp = max(min_elements - 1, 0)
-        self.parser = (
-            (
-                element 
-                + delimiter 
-                + FollowedBy(element)
-            )[min_sub_exp, ...] 
-            + element
-        ) # fmt: skip
+        self.parser = element + (delimiter + element)[min_sub_exp, ...]
         if min_elements == 0:
             self.parser = self.parser | empty
 
