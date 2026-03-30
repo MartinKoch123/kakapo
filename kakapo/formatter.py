@@ -173,14 +173,14 @@ def normalize_indentation(composite: model.Composite):
             continue
 
         if predecessor:
-            preceeding_literal = predecessor
+            preceding_literal = predecessor
         else:
-            preceeding_literal = parent.predecessor
+            preceding_literal = parent.predecessor
 
         # Predecessor should be whitespace and semicolons.
-        assert isinstance(preceeding_literal, model.Literal)
+        assert isinstance(preceding_literal, model.Literal)
 
-        string = preceeding_literal.value
+        string = preceding_literal.value
         assert re.match(pattern=r"( \n;)*", string=string)
 
         # Skip inline comments.
@@ -192,11 +192,11 @@ def normalize_indentation(composite: model.Composite):
 
         # Ensure there is a newline at the end of the whitespace, so that the current
         # element is on a new line (unless it's a comment).
-        if preceeding_literal.predecessor and "\n" not in string:
+        if preceding_literal.predecessor and "\n" not in string:
             string += "\n"
 
         # Add normalized indentation.
-        preceeding_literal.value = string + indent
+        preceding_literal.value = string + indent
 
 
 @format_type(model.Literal)

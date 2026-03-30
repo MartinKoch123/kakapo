@@ -304,7 +304,7 @@ Examples:
 """
 identifier_pattern = {
     "Initial": r"[A-Za-z]",
-    "Body": r"[\w.]*",
+    "Body": r"[\w.]*", # Include identifiers connected by dots.
     "DontEndWithDot": r"(?<!\.)",
 }
 
@@ -431,6 +431,16 @@ expression_statement = nothing(1) + statement_core
 assignment_statement << (assignment_target + statement_core)
 statement = assignment_statement | expression_statement
 
+argument_definition = (
+    identifier
+    + (element_delimiter + arguments_list | nothing(2))
+    + (element_delimiter + identifier | nothing(2))
+)
+# Single argument specification as used in an 'arguments' or 'properties' block.
+
+argument_definition_group = argument_definition + ZeroOrMore(statement_delimiter + argument_definition)
+# Group of argument definitions in an 'arguments' or 'properties' block.
+
 code = Forward()
 
 if_ = Block(
@@ -499,7 +509,7 @@ classdef = Block(
 properties = Block(
     name="properties",
     head=arguments_list,
-    body=code,
+    body=argument_definition_group,
     optional_head=True,
 )
 
@@ -554,8 +564,10 @@ file.enable_packrat()
 # Add parse actions to grammar objects that turn the tokens into the respective dataclass.
 parse_actions = {
     anonymous_function: model.AnonymousFunction,
-    array: model.Array,
+    argument_definition: model.ArgumentDefinition,
+    argument_definition_group: model.ArgumentDefinitionGroup,
     arguments_list: model.ArgumentsList,
+    array: model.Array,
     expression_statement: model.Statement,
     catch: model.Catch,
     classdef: model.Classdef,

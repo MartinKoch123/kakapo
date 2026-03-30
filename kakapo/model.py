@@ -385,5 +385,18 @@ class ElseIf(Block):
     pass
 
 
+@dataclass
+class ArgumentDefinition(Composite):
+    name: Literal
+    pre_shape_delimiter: Literal
+    shape: ArgumentsList
+    pre_type_delimiter: Literal
+    type: Literal
+
+
+class ArgumentDefinitionGroup(VariableLengthComposite):
+    pass
+
+
 def none_or_whitespace(x) -> bool:
     return x is None or isinstance(x, str) and (x.isspace() or x == "")

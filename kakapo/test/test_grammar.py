@@ -1,7 +1,14 @@
+from typing import Any
+
 import pyparsing as pp
 import pytest
 
 from kakapo import grammar, model
+
+
+def parse(string: str, parser: pp.ParserElement) -> Any:
+    result = parser.parse_string(string, parse_all=True)
+    return result[0]
 
 
 def assert_parsing_fails(element: pp.ParserElement, string: str):
@@ -11,7 +18,7 @@ def assert_parsing_fails(element: pp.ParserElement, string: str):
 
 def assert_parsing_returns_unmodified_string(element: pp.ParserElement, string: str):
     result = element.parse_string(string, parse_all=True)
-    assert [string] == result.as_list()
+    assert string == str(result[0])
 
 
 @pytest.mark.parametrize("string", [" ", "\t", "\n", "\t\n"])
@@ -360,19 +367,7 @@ def test_if(string):
     assert expected == string
 
 
-@pytest.mark.parametrize(
-    "string",
-    (
-        "properties end",
-        "properties\n end",
-        "properties\n a;b end",
-        "properties\n a\nb\nend",
-    ),
-)
-def test_properties(string):
-    model = grammar.properties.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
+
 
 @pytest.mark.parametrize(
     "string",
@@ -492,9 +487,7 @@ def test_file(string):
     ),
 )
 def test_prefix_operation(string):
-    model = grammar.prefix_operation.parse_string(string, parse_all=True)[0]
-    expected = str(model)
-    assert expected == string
+    assert_parsing_returns_unmodified_string(grammar.prefix_operation, string)
 
 
 @pytest.mark.parametrize(
@@ -507,10 +500,50 @@ def test_prefix_operation(string):
     ),
 )
 def test_postfix_operation(string):
-    model = grammar.postfix_operation.parse_string(string)[0]
-    expected = str(model)
-    assert expected == string
+    assert_parsing_returns_unmodified_string(grammar.postfix_operation, string)
 
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "a",
+        "a (1, 1)",
+        "a b",
+        "a (1, 1) b",
+        "a (1, :, 1) b.c.d",
+
+    )
+)
+def test_argument_definition(string):
+    assert_parsing_returns_unmodified_string(grammar.argument_definition, string)
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "a",
+        "a\nb",
+        "a;b\nc",
+        "a (1, 2) double\nb string; cde (:, :, 3) a someclass",
+    )
+)
+def test_argument_definition_group(string):
+    assert_parsing_returns_unmodified_string(grammar.argument_definition_group, string)
+
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "properties end",
+        "properties\n end",
+        "properties\n a;b end",
+        "properties\n a\nb\nend",
+        "properties\n a (1, 1) double\nend",
+        "properties\n a (1, 1) double; b struct\nend",
+    ),
+)
+def test_properties(string):
+    assert_parsing_returns_unmodified_string(grammar.properties, string)
 
 
 if __name__ == "__main__":
