@@ -183,18 +183,18 @@ def test_command_error(string):
         (
             "a",
             grammar.DelimitedList(grammar.identifier, delimiter=","),
-            model.DelimitedList([model.Literal("a")]),
+            model.DelimitedList([model.Literal(s) for s in ["a", ""]]),
         ),
         (
             "a\n, b",
             grammar.DelimitedList(grammar.identifier, delimiter=","),
-            model.DelimitedList([model.Literal(s) for s in ["a", "\n, ", "b"]]),
+            model.DelimitedList([model.Literal(s) for s in ["a", "\n, ", "b", ""]]),
         ),
         (
-            "a ;; b   ;;c",
+            "a ;; b   ;;c ;;",
             grammar.DelimitedList(grammar.identifier, delimiter=";;"),
             model.DelimitedList(
-                [model.Literal(s) for s in ["a", " ;; ", "b", "   ;;", "c"]]
+                [model.Literal(s) for s in ["a", " ;; ", "b", "   ;;", "c", " ;;"]]
             ),
         ),
     ),
@@ -268,6 +268,7 @@ def test_anonymous_function(string):
         "[]",
         "[1, a, 'hello', true, mean(x + 1)]",
         "{1, 2, 3}",
+        "{1  , 2 3,}",
     ),
 )
 def test_array(string):
@@ -520,6 +521,17 @@ def test_properties(string):
 )
 def test_arguments(string):
     assert_parsing_returns_unmodified_string(grammar.arguments, string)
+
+@pytest.mark.parametrize(
+    "string",
+    (
+        "()",
+        "(1)",
+        "(1, 2)",
+    )
+)
+def test_arguments_list(string):
+    assert_parsing_returns_unmodified_string(grammar.arguments_list, string)
 
 
 if __name__ == "__main__":

@@ -137,16 +137,21 @@ class DelimitedList(ParserElement):
 
         if isinstance(delimiter, str):
             delimiter = Literal(delimiter)
-        delimiter = ows + delimiter + ows
+        delimiter_and_whitespace = ows + delimiter + ows
         if delimiter_is_optional:
-            delimiter = delimiter | ws
-        delimiter.add_parse_action(
+            delimiter_and_whitespace = delimiter_and_whitespace | ws
+        delimiter_and_whitespace.add_parse_action(
             lambda s, loc, toks: model.Literal("".join(str(t) for t in toks))
         )
         min_sub_exp = max(min_elements - 1, 0)
-        self.parser = element + (delimiter + element)[min_sub_exp, ...]
+        parser = (
+            element
+            + (delimiter_and_whitespace + element)[min_sub_exp, ...]
+            + (literal(Combine(ows + delimiter)) | empty_string(1)) # Optional trailing delimiter
+        )
         if min_elements == 0:
-            self.parser = self.parser | empty
+            parser = parser | empty
+        self.parser = parser
 
     def parseImpl(self, instring, loc, doActions=True):
         loc, tokens = self.parser._parse(instring, loc, doActions)
@@ -223,6 +228,10 @@ def empty_string(n: int = 1):
 
 def join_strings(s, loc, toks):
     return model.Literal("".join(str(t) for t in toks))
+
+
+def literal(parser: ParserElement) -> ParserElement:
+    return parser.add_parse_action(model.Literal.from_tokens)
 
 
 def regex_literal(pattern: str) -> ParserElement:
@@ -348,7 +357,7 @@ assignment_statement = Forward()
 argument_brackets = (("(", ")"), ("{", "}"))
 argument = assignment_statement | expression | Leaf(":")
 arguments_list = (
-    (Leaf(".") | nothing(1))
+    (Leaf(".") | nothing(1)) # Dot for dynamic field referencing, e.g. myStruct.("myField")
     + parenthesized(
         DelimitedList(argument, delimiter=",", min_elements=0), 
         brackets=argument_brackets,

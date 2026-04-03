@@ -149,6 +149,7 @@ def test_ensure_comment_leading_space(input_: str, expected: str):
         ("func(max(1, 2)  , 'text',   3.12)", "func(max(1, 2), 'text', 3.12)"),
         ("1+1", "1 + 1"),
         ("1  :1", "1 : 1"),
+        ("[1  ,]", "[1,]"),
     ),
 )
 def test_normalize_whitespace_in_delimited_list(input_: str, expected: str):
