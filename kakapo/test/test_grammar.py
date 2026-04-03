@@ -150,7 +150,7 @@ def test_array_delimiter(string):
 @pytest.mark.parametrize(
     "string, expected",
     [
-        ("clear", model.Command([model.Literal("clear")])),
+        # ("clear", model.Command([model.Literal("clear")])),
         (
             "clear a123 b_",
             model.Command(

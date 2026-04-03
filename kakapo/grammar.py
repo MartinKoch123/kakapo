@@ -544,8 +544,8 @@ methods = Block(
 
 command_identifier = Combine(identifier + Opt(".*"))
 command = (
-    command_identifier
-    + ZeroOrMore(element_delimiter + command_identifier)
+    identifier
+    + (regex_literal("[ \t]+") + regex_literal(r"[^ \n\t=]+"))[1, ...]
     + (StringEnd() | FollowedBy(statement_delimiter))
 )
 
