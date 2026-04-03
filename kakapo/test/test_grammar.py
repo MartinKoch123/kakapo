@@ -221,7 +221,6 @@ def test_string(input_, expected):
 @pytest.mark.parametrize(
     "string",
     (
-        # "func",
         "func()",
         "func(  )",
         "func(1)",

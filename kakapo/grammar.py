@@ -451,10 +451,11 @@ argument_definition = (
 )
 # Single argument specification as used in an 'arguments' or 'properties' block.
 
-argument_definition_group = argument_definition + ZeroOrMore(
-    statement_delimiter + argument_definition
-)
-# Group of argument definitions in an 'arguments' or 'properties' block.
+argument_definition_group = (
+    argument_definition
+    + ZeroOrMore(statement_delimiter + argument_definition)
+) # fmt: skip
+"""Group of argument definitions in an 'arguments' or 'properties' block."""
 
 code = Forward()
 
