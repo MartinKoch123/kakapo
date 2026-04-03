@@ -407,6 +407,7 @@ operand_atom << (
     | anonymous_function
     | parenthesized(operand)
     | parenthesized(operation)
+    | end
 )
 
 prefix_operation = (Leaf("-") | Leaf("~")) + operand_atom
@@ -426,7 +427,7 @@ keyword_statement = Or(Leaf(kw) for kw in ["return", "break", "continue"])
 statement_core = expression | keyword_statement
 """An assignment or an expression with either no result or an unused result."""
 
-expression_statement = nothing(1) + statement_core
+expression_statement = ~end + nothing(1) + statement_core
 assignment_statement << (assignment_target + statement_core)
 statement = assignment_statement | expression_statement
 
