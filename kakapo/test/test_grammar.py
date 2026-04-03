@@ -148,21 +148,16 @@ def test_array_delimiter(string):
 
 
 @pytest.mark.parametrize(
-    "string, expected",
-    [
-        # ("clear", model.Command([model.Literal("clear")])),
-        (
-            "clear a123 b_",
-            model.Command(
-                [model.Literal(s) for s in ["clear", " ", "a123", " ", "b_"]]
-            ),
-        ),
-        # ("command -flag arg", model.Command(["command", " ", "-flag", " ", "arg"]))
-    ],
+    "string",
+    (
+        "a b",
+        "a c.d.*"
+        "a -l",
+        "a b -c -def",
+    )
 )
-def test_command(string, expected):
-    actual = grammar.command.parse_string(string)[0]
-    assert actual == expected
+def test_command(string):
+    assert_parsing_returns_unmodified_string(grammar.command, string)
 
 
 @pytest.mark.parametrize(
