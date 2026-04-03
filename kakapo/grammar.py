@@ -318,20 +318,22 @@ identifier = (
     ~ReservedKeyword() 
     + Regex("".join(identifier_pattern.values()))
 ) # fmt: skip
+"""An identifier for a variable, function etc."""
 
-"""A comment. Starts at the comment marker '%' end ends before the next line break."""
+
 comment = Leaf("%") + rest_of_line.add_parse_action(model.Literal.from_tokens)
+"""A comment. Starts at the comment marker '%' end ends before the next line break."""
 
 
-"""A quoted string with single or double quotes."""
 string = (
     QuotedString(quote_char='"', esc_quote='""', unquote_results=False) | 
     QuotedString(quote_char="'", esc_quote="''", unquote_results=False)
 ) # fmt: skip
+"""A quoted string with single or double quotes."""
 
 expression = Forward()
 
-"""Array"""
+
 array_delimiter = Leaf(",") | Leaf(";")
 array = parenthesized(
     DelimitedList(
@@ -341,7 +343,8 @@ array = parenthesized(
         delimiter_is_optional=True,
     ),
     brackets=(("[", "]"), ("{", "}")),
-).set_name("Array")
+)
+"""Array or cell array, e.g., "[a, b]" or "{1, 2}"."""
 
 call = Forward()
 
