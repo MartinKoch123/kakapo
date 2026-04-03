@@ -137,17 +137,15 @@ class DelimitedList(ParserElement):
 
         if isinstance(delimiter, str):
             delimiter = Literal(delimiter)
-        delimiter_and_whitespace = ows + delimiter + ows
+        delimiter_and_whitespace = Combine(ows + delimiter + ows)
         if delimiter_is_optional:
             delimiter_and_whitespace = delimiter_and_whitespace | ws
-        delimiter_and_whitespace.add_parse_action(
-            lambda s, loc, toks: model.Literal("".join(str(t) for t in toks))
-        )
+        delimiter_and_whitespace.add_parse_action(join_strings)
         min_sub_exp = max(min_elements - 1, 0)
         parser = (
             element
             + (delimiter_and_whitespace + element)[min_sub_exp, ...]
-            + (literal(Combine(ows + delimiter)) | empty_string(1)) # Optional trailing delimiter
+            + (Combine(ows + delimiter).add_parse_action(join_strings) | empty_string(1)) # Optional trailing delimiter
         )
         if min_elements == 0:
             parser = parser | empty
@@ -228,10 +226,6 @@ def empty_string(n: int = 1):
 
 def join_strings(s, loc, toks):
     return model.Literal("".join(str(t) for t in toks))
-
-
-def literal(parser: ParserElement) -> ParserElement:
-    return parser.add_parse_action(model.Literal.from_tokens)
 
 
 def regex_literal(pattern: str) -> ParserElement:
