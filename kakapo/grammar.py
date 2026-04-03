@@ -6,6 +6,7 @@ Parsing logic for MATLAB code.
 
 
 from typing import Sequence
+from typing import Literal as LiteralType
 from pathlib import Path
 import itertools
 
@@ -88,7 +89,10 @@ ParserElement.set_default_whitespace_chars("")
 
 
 class Leaf(ParserElement):
-    """Parser for the model.Leaf object. A leaf consists only af a string and does not contain child elements."""
+    """
+    Parser for the model.Literal object. A leaf consists only af a string and
+    does not contain child elements.
+    """
 
     def __init__(self, literal: str):
         super().__init__()
@@ -163,7 +167,7 @@ class DelimitedList(ParserElement):
 
 
 class Block(ParserElement):
-
+    
     def __init__(
         self,
         name: str,
@@ -171,7 +175,7 @@ class Block(ParserElement):
         head: ParserElement | None = None,
         optional_head: bool = False,
         optional_head_delimiter: bool = False,
-        end: bool | str = True,
+        end_mode: LiteralType["required", "optional", "none"] = "required",
     ):
         super().__init__()
 
@@ -182,12 +186,12 @@ class Block(ParserElement):
 
         end_placeholder = empty_string() + nothing()
 
-        end_element = end_delimiter + Leaf("end")
-        if isinstance(end, str):
-            assert end == "optional"
-            end_element |= end_placeholder
-        elif not end:
-            end_element = end_placeholder
+        if end_mode == "required":
+            end_parser = end_delimiter + end() 
+        if end_mode == "optional":
+            end_parser = (end_delimiter + end()) | end_placeholder
+        elif end_mode == "none":
+            end_parser = end_placeholder
 
         if head is None:
             head_parser = nothing(2)
@@ -205,7 +209,7 @@ class Block(ParserElement):
             Keyword(name).add_parse_action(model.Literal.from_tokens)
             + head_parser
             + body_parser
-            + end_element
+            + end_parser
         ) # fmt: skip
 
     def parseImpl(self, instring, loc, doActions=True):
@@ -261,6 +265,9 @@ def parenthesized(
     return parser.add_parse_action(model.Parenthesized.from_tokens).set_name(
         "Parenthesized"
     )
+
+
+end = Keyword("end").add_parse_action(lambda tokens: model.End())
 
 
 """White space including ellipsis."""
@@ -441,16 +448,16 @@ if_ = Block(
     name="if",
     head=expression_statement,
     body=code,
-    end=True,
+    end_mode="required",
 )
 
-else_ = Block(name="else", body=code, end=False)  # End belongs to if-block.
+else_ = Block(name="else", body=code, end_mode="none")  # End belongs to if-block.
 
 else_if = Block(
     name="elseif",
     head=expression_statement,
     body=code,
-    end=False,  # End belongs to if-block.
+    end_mode="none",  # End belongs to if-block.
 )
 
 
@@ -458,7 +465,7 @@ for_ = Block(
     name="for",
     head=assignment_statement,
     body=code,
-    end=True,
+    end_mode="required",
 )
 """For-loop code block."""
 
@@ -467,7 +474,7 @@ while_ = Block(name="while", head=expression_statement, body=code)
 """While-loop code block."""
 
 
-function = Block(name="function", head=statement, body=code, end="optional")
+function = Block(name="function", head=statement, body=code, end_mode="optional")
 """Function definition block."""
 
 
@@ -476,18 +483,18 @@ catch = Block(
     head=identifier,
     optional_head=True,
     body=code,
-    end=False,
+    end_mode="none",
 )
 """'catch'-block of a try-catch block."""
 
 
 try_ = Block(name="try", body=code)
 
-switch_case = Block(name="case", head=expression_statement, body=code, end=False)
+switch_case = Block(name="case", head=expression_statement, body=code, end_mode="none")
 """'case'-block of a switch statement."""
 
 
-switch_otherwise = Block(name="otherwise", body=code, end=False)
+switch_otherwise = Block(name="otherwise", body=code, end_mode="none")
 """'otherwise'-block of a switch statement."""
 
 

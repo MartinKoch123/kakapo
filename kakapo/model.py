@@ -61,7 +61,8 @@ class Literal(Component):
 
     @classmethod
     def from_tokens(cls, tokens: Sequence):
-        assert len(tokens) == 1
+        if len(tokens) != 1:
+            raise ValueError("Number of tokens must equal 1")
         return cls(tokens[0])
 
 
@@ -273,7 +274,7 @@ class Block(Composite, Construct):
     pre_body_delimiter: Literal
     body: Component
     pre_end_delimiter: Literal
-    end: Literal | Missing
+    end: End | Missing
 
     def descendants_and_indent(
         self, level: int = 0

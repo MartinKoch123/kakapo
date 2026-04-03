@@ -97,7 +97,7 @@ def ensure_function_end(function: model.Function):
     """Ensure function block ends with 'end' keyword."""
     if function.pre_end_delimiter == Literal(""):
         function.pre_end_delimiter = Literal("\n")
-    function.end = Literal("end")
+    function.end = model.End()
 
 
 def normalize_trailing_whitespace(file: model.File):
@@ -154,12 +154,8 @@ def normalize_indentation(composite: model.Composite):
 
     for element, level in composite.descendants_and_indent():
 
-        if not isinstance(element, model.Construct) and (
-            not isinstance(element, model.Literal) or element.value != "end"
-        ):
+        if not isinstance(element, (model.Construct, model.End)):
             continue
-        # if isinstance(element, model.Comment):
-        #     continue
 
         parent = element.parent
         predecessor = element.predecessor
