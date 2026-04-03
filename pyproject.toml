@@ -7,3 +7,8 @@ dependencies = [
     "pyparsing>=3.3.2",
     "pytest>=9.0.2",
 ]
+
+[dependency-groups]
+dev = [
+    "black>=26.3.1",
+]

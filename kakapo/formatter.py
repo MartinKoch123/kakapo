@@ -7,7 +7,6 @@ import pyparsing
 from . import model, grammar
 from .model import Literal
 
-
 INDENT = 4 * " "
 
 
@@ -155,9 +154,8 @@ def normalize_indentation(composite: model.Composite):
 
     for element, level in composite.descendants_and_indent():
 
-        if (
-            not isinstance(element, model.Construct)
-            and (not isinstance(element, model.Literal) or element.value != "end")
+        if not isinstance(element, model.Construct) and (
+            not isinstance(element, model.Literal) or element.value != "end"
         ):
             continue
         # if isinstance(element, model.Comment):
@@ -218,14 +216,18 @@ def add_empty_lines_before_and_after_blocks(literal: model.Literal):
     match literal:
         case model.Literal(
             predecessor=model.Block(
-                name=model.Literal("classdef" | "function" | "methods" | "properties" | "arguments")
+                name=model.Literal(
+                    "classdef" | "function" | "methods" | "properties" | "arguments"
+                )
             )
         ):
             while literal.value.count("\n") < 2:
                 literal.value += "\n"
         case model.Literal(
             successor=model.Block(
-                name=model.Literal("classdef" | "function" | "methods" | "properties" | "arguments")
+                name=model.Literal(
+                    "classdef" | "function" | "methods" | "properties" | "arguments"
+                )
             )
         ):
             while literal.value.count("\n") < 2:

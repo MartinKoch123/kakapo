@@ -16,7 +16,7 @@ class Component:
     @property
     def parent(self) -> Composite | None:
         return self._parent
-    
+
     @parent.setter
     def parent(self, parent: Composite | None):
         self._parent = parent
@@ -24,7 +24,7 @@ class Component:
     @property
     def successor(self) -> Component | None:
         return self._successor
-    
+
     @successor.setter
     def successor(self, successor: Component | None):
         self._successor = successor
@@ -63,15 +63,15 @@ class Literal(Component):
     def from_tokens(cls, tokens: Sequence):
         assert len(tokens) == 1
         return cls(tokens[0])
-    
+
 
 @dataclass
 class Missing(Component):
     """Leaf representing a missing optional element."""
-    
+
     def __str__(self) -> str:
         return ""
-    
+
 
 @dataclass
 class Composite(Component):
@@ -109,13 +109,17 @@ class Composite(Component):
             own_child == other_child for own_child, other_child in zip(self, other)
         )
 
-    def descendants_and_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
+    def descendants_and_indent(
+        self, level: int = 0
+    ) -> Generator[tuple[Component, int]]:
         for child in self:
             if isinstance(child, (Else, ElseIf, Catch)):
                 level -= 1
             yield child, level
             if isinstance(child, Composite):
-                for grand_child, grand_child_level in child.descendants_and_indent(level):
+                for grand_child, grand_child_level in child.descendants_and_indent(
+                    level
+                ):
                     yield grand_child, grand_child_level
             if isinstance(child, (Else, ElseIf, Catch)):
                 level += 1
@@ -271,7 +275,9 @@ class Block(Composite, Construct):
     pre_end_delimiter: Literal
     end: Literal | Missing
 
-    def descendants_and_indent(self, level: int = 0) -> Generator[tuple[Component, int]]:
+    def descendants_and_indent(
+        self, level: int = 0
+    ) -> Generator[tuple[Component, int]]:
         for i, child in enumerate(self):
             if i == 4:
                 level += 1
@@ -279,9 +285,10 @@ class Block(Composite, Construct):
                 level -= 1
             yield child, level
             if isinstance(child, Composite):
-                for grand_child, grand_child_level in child.descendants_and_indent(level):
+                for grand_child, grand_child_level in child.descendants_and_indent(
+                    level
+                ):
                     yield grand_child, grand_child_level
-
 
 
 class Function(Block):
@@ -302,6 +309,7 @@ class Methods(Block):
 
 class If(Block):
     pass
+
 
 class ForLoop(Block):
     pass
@@ -400,6 +408,12 @@ class ArgumentDefinitionGroup(VariableLengthComposite):
 
 class Arguments(Block):
     pass
+
+
+class End(Component):
+
+    def __str__(self) -> str:
+        return "end"
 
 
 def none_or_whitespace(x) -> bool:

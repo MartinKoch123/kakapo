@@ -31,10 +31,8 @@ from pyparsing import (
     Word,
     ZeroOrMore,
 )
-from pyparsing.tools.cvt_pyparsing_pep8_names import pre_pep8_arg_name, pre_pep8_method_name
 
 from . import model
-
 
 OPERATORS = [
     "+",
@@ -110,7 +108,9 @@ class ReservedKeyword(ParserElement):
 
     def __init__(self):
         super().__init__()
-        self.parser = Or(Keyword(s) for s in KEYWORDS).add_parse_action(model.Literal.from_tokens)
+        self.parser = Or(Keyword(s) for s in KEYWORDS).add_parse_action(
+            model.Literal.from_tokens
+        )
 
     def parseImpl(self, instring, loc, doActions=True):
         return self.parser._parse(instring, loc, doActions)
@@ -145,7 +145,10 @@ class DelimitedList(ParserElement):
         parser = (
             element
             + (delimiter_and_whitespace + element)[min_sub_exp, ...]
-            + (Combine(ows + delimiter).add_parse_action(join_strings) | empty_string(1)) # Optional trailing delimiter
+            + (
+                Combine(ows + delimiter).add_parse_action(join_strings)
+                | empty_string(1)
+            )  # Optional trailing delimiter
         )
         if min_elements == 0:
             parser = parser | empty
@@ -300,7 +303,7 @@ Examples:
 """
 identifier_pattern = {
     "Initial": r"[A-Za-z]",
-    "Body": r"[\w.]*", # Include identifiers connected by dots.
+    "Body": r"[\w.]*",  # Include identifiers connected by dots.
     "DontEndWithDot": r"(?<!\.)",
 }
 
@@ -364,11 +367,13 @@ call << (
     + arguments_list[1, ...]
 ) # fmt: skip
 
+
 def nest_calls(s, loc, toks):
     result = model.Call.from_tokens(toks[:2])  # base + first args
     for args in toks[2:]:
         result = model.Call.from_tokens([result, args])
     return result
+
 
 call.add_parse_action(nest_calls)
 
@@ -378,13 +383,7 @@ Examples:
  - @(x) x + 1
  - @mean
 """
-anonymous_function = (
-    Leaf("@") 
-    + ows 
-    + (arguments_list | nothing(1)) 
-    + ows 
-    + expression
-)
+anonymous_function = Leaf("@") + ows + (arguments_list | nothing(1)) + ows + expression
 
 # number = common.number.set_parse_action(model.Literal.from_tokens)
 number = Regex(r"[-+\d][\d.eE]*").set_parse_action(model.Literal.from_tokens)
@@ -409,10 +408,7 @@ postfix_operation = operand_atom + (Leaf("'") | Leaf(".'"))
 unary_operation = prefix_operation | postfix_operation
 
 operand << (
-        unary_operation
-        | operand_atom
-        | parenthesized(operand)
-        | parenthesized(operation)
+    unary_operation | operand_atom | parenthesized(operand) | parenthesized(operation)
 )
 operation << DelimitedList(operand, delimiter=operator, min_elements=2)
 expression << (operation | operand)
@@ -434,7 +430,9 @@ argument_definition = (
 )
 # Single argument specification as used in an 'arguments' or 'properties' block.
 
-argument_definition_group = argument_definition + ZeroOrMore(statement_delimiter + argument_definition)
+argument_definition_group = argument_definition + ZeroOrMore(
+    statement_delimiter + argument_definition
+)
 # Group of argument definitions in an 'arguments' or 'properties' block.
 
 code = Forward()
@@ -519,7 +517,7 @@ methods = Block(
     head=arguments_list,
     body=code,
     optional_head=True,
-    optional_head_delimiter=True
+    optional_head_delimiter=True,
 )
 
 command_identifier = Combine(identifier + Opt(".*"))
@@ -553,9 +551,11 @@ code << code_element + ZeroOrMore(statement_delimiter + code_element)
 
 
 file = (
-    regex_literal(r"[ \t\n;]*") 
-    + (code | nothing(1)) 
-    + (regex_literal(r"[ \t\n;]*") | (empty_string() + StringEnd())) # Regex fails mysteriously at string end.
+    regex_literal(r"[ \t\n;]*")
+    + (code | nothing(1))
+    + (
+        regex_literal(r"[ \t\n;]*") | (empty_string() + StringEnd())
+    )  # Regex fails mysteriously at string end.
 )
 """A file consisting of code wrapped by optional white space."""
 
