@@ -229,10 +229,15 @@ def test_string(input_, expected):
         "func(1,a,  2 / 3 + max(1, 2))",
         "f()()",
         "f(a,b)(1,2)(3,4)",
+        "a.b",
+        "a.b.c.d",
+        "a.(b)",
+        "a.bc.(de).f.(g)",
     ),
 )
 def test_call(string):
     assert_parsing_returns_unmodified_string(grammar.call, string)
+
 
 
 @pytest.mark.parametrize(

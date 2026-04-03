@@ -417,5 +417,14 @@ class End(Component):
         return "end"
 
 
+@dataclass
+class FieldAccess(Composite):
+    container: Literal
+    field: Literal
+
+    def __str__(self) -> str:
+        return f"{self.container}.{self.field}"
+
+
 def none_or_whitespace(x) -> bool:
     return x is None or isinstance(x, str) and (x.isspace() or x == "")

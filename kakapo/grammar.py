@@ -31,8 +31,10 @@ from pyparsing import (
     White,
     Word,
     ZeroOrMore,
+    Suppress,
 )
 
+from archive.matparse import identifier
 from . import model
 
 OPERATORS = [
@@ -167,7 +169,7 @@ class DelimitedList(ParserElement):
 
 
 class Block(ParserElement):
-    
+
     def __init__(
         self,
         name: str,
@@ -310,8 +312,7 @@ Examples:
 """
 identifier_pattern = {
     "Initial": r"[A-Za-z]",
-    "Body": r"[\w.]*",  # Include identifiers connected by dots.
-    "DontEndWithDot": r"(?<!\.)",
+    "Body": r"\w*",  # Include identifiers connected by dots.
 }
 
 identifier = (
@@ -346,6 +347,9 @@ array = parenthesized(
 )
 """Array or cell array, e.g., "[a, b]" or "{1, 2}"."""
 
+
+field_suffix = Suppress(Literal(".")) + identifier
+
 call = Forward()
 
 assignment_target = (
@@ -374,14 +378,20 @@ arguments_list = (
 """A variable or a function call with or without arguments. Includes nested calls."""
 call << (
     identifier
-    + arguments_list[1, ...]
+    + (arguments_list | field_suffix)[1, ...]
 ) # fmt: skip
 
 
+def call_or_field_access_from_tokens(toks):
+    if isinstance(toks[1], model.ArgumentsList):
+        return model.Call.from_tokens(toks)
+    return model.FieldAccess.from_tokens(toks)
+
+
 def nest_calls(s, loc, toks):
-    result = model.Call.from_tokens(toks[:2])  # base + first args
+    result = call_or_field_access_from_tokens(toks[:2])  # base + first args
     for args in toks[2:]:
-        result = model.Call.from_tokens([result, args])
+        result = call_or_field_access_from_tokens([result, args])
     return result
 
 
@@ -437,7 +447,7 @@ statement = assignment_statement | expression_statement
 argument_definition = (
     identifier
     + (element_delimiter + arguments_list | nothing(2))
-    + (element_delimiter + identifier | nothing(2))
+    + (element_delimiter + (call | identifier) | nothing(2))
 )
 # Single argument specification as used in an 'arguments' or 'properties' block.
 
