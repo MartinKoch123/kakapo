@@ -294,9 +294,9 @@ element_delimiter = Combine(
 
 
 statement_delimiter = Combine(
-    ows + Leaf(";") + ows
-    | regex_literal(r"[ \t]*\n") + empty_string() + ows
-    | regex_literal(r"[ \t]*") + empty_string() + ows + FollowedBy(Literal("%"))
+    regex_literal(r"\s*;[;\s]*") # Contains a semicolon
+    | regex_literal(r"[ \t]*\n[;\s]*") # or a newline
+    | regex_literal(r"[ \t]*") + FollowedBy(Literal("%")) # or is followed by a comment
 )
 
 end_delimiter = regex_literal(r"[ \t\n;]+")

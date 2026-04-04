@@ -293,6 +293,7 @@ def test_function(string):
         ";",
         " ;\n",
         "\n",
+        " ;; \n  ;; ; \n",
     ),
 )
 def test_statement_delimiter(string):
