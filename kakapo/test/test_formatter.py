@@ -215,6 +215,7 @@ def test_remove_excess_newlines(string: str, expected: str):
     "string, expected",
     (
         ("function a\nend\nfunction b\nend", "function a\nend\n\nfunction b\nend"),
+        ("%comment\nfunction a\nend", "%comment\nfunction a\nend"), # Don't add newline between comment and block.
     )
 )
 def test_add_empty_lines_before_and_after_block(string: str, expected: str):

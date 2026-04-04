@@ -233,6 +233,8 @@ def add_empty_lines_before_and_after_blocks(literal: model.Literal):
                 )
             )
         ):
+            if isinstance(literal.predecessor, model.Comment):
+                return
             while literal.value.count("\n") < 2:
                 literal.value += "\n"
 
