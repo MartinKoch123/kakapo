@@ -76,8 +76,15 @@ def remove_white_space_and_semicolon_after_keyword(code: model.Composite):
     for element in code.descendants():
         match element:
             case model.Literal(
-                predecessor=model.Statement(
-                    body=Literal(value="return" | "break" | "continue")
+                predecessor=(
+                    # Predecessor is keyword statement.
+                    model.Statement(
+                        body=Literal(value="return" | "break" | "continue")
+                    )
+                    # Or predecessor is model.Code with the last element being a keyword statement.
+                    | model.Code(
+                        children=[*_, model.Statement(body=Literal(value="return" | "break" | "continue"))]
+                    )
                 )
             ):
                 element.regex_replace(pattern=r"^(\s*;+)+", repl="")
