@@ -84,10 +84,15 @@ def test_remove_white_space_and_semicolon_after_if_condition(
 @pytest.mark.parametrize(
     "input_, expected",
     [
-        # ("return ; a", "return a"),
-        # ("break\t ; a", "break a"),
+        ("return ; a", "return a"),
+        ("break\t ; a", "break a"),
         ("continue ; ;  ;a", "continue a"),
-        # ("if true\n return;\nend", "if true\n return\nend"),
+        ("if true\n return;\nend", "if true\n return\nend"),
+
+        # These should not change
+        ("a=1;", "a=1;"),
+        ("if 1\na;\nend", "if 1\na;\nend"),
+        ("switch a\ncase b\nc = 1;\ncase c\nd = 2;\nend", "switch a\ncase b\nc = 1;\ncase c\nd = 2;\nend"),
     ],
 )
 def test_remove_semicolon_after_keyword(input_: str, expected: str):

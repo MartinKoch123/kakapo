@@ -62,6 +62,8 @@ def normalize_whitespace_in_assignment(output_arguments: model.AssignmentTarget)
 
 @format_type(model.Block)
 def remove_post_block_whitespace_and_semicolon(block: model.Block):
+    if isinstance(block.end, model.Missing):
+        return
     if not isinstance(block.successor, model.Literal):
         return
     block.successor.regex_replace(pattern=r"^(\s*;+)+", repl="")
@@ -69,7 +71,8 @@ def remove_post_block_whitespace_and_semicolon(block: model.Block):
 
 @format_type(model.Block)
 def remove_post_block_head_whitespace_and_semicolon(block: model.Block):
-    block.pre_body_delimiter.regex_replace(pattern=r"^(\s*;+)+", repl="")
+    if isinstance(block.pre_body_delimiter, model.Literal):
+        block.pre_body_delimiter.regex_replace(pattern=r"^(\s*;+)+", repl="")
 
 
 def remove_white_space_and_semicolon_after_keyword(code: model.Composite):
