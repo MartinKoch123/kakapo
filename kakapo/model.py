@@ -328,6 +328,10 @@ class Catch(Block):
     pass
 
 
+class SwitchBody(VariableLengthComposite):
+    pass
+
+
 class Switch(Block):
     pass
 

@@ -190,9 +190,9 @@ class Block(ParserElement):
 
         if end_mode == "required":
             end_parser = end_delimiter + end() 
-        if end_mode == "optional":
+        elif end_mode == "optional":
             end_parser = (end_delimiter + end()) | end_placeholder
-        elif end_mode == "none":
+        else:
             end_parser = end_placeholder
 
         if head is None:
@@ -505,15 +505,21 @@ catch = Block(
 
 try_ = Block(name="try", body=code)
 
-switch_case = Block(name="case", head=expression_statement, body=code, end_mode="none")
+case = Block(name="case", head=expression_statement, body=code, end_mode="none")
 """'case'-block of a switch statement."""
 
 
-switch_otherwise = Block(name="otherwise", body=code, end_mode="none")
+otherwise = Block(name="otherwise", body=code, end_mode="none")
 """'otherwise'-block of a switch statement."""
 
 
-switch = Block(name="switch", head=expression_statement, body=code)
+switch_body = (
+    (case | otherwise)
+    + ZeroOrMore(statement_delimiter + (case | otherwise))
+)
+
+
+switch = Block(name="switch", head=expression_statement, body=switch_body)
 """Switch statement code block"""
 
 classdef = Block(
@@ -561,8 +567,6 @@ any_block = (
     | methods
     | properties
     | switch
-    | switch_case
-    | switch_otherwise
     | try_
     | while_
 )
@@ -579,7 +583,7 @@ file = (
         regex_literal(r"[ \t\n;]*") | (empty_string() + StringEnd())
     )  # Regex fails mysteriously at string end.
 )
-"""A file consisting of code wrapped by optional white space."""
+"""Content of a MATLAB code file consisting of code wrapped by optional white space."""
 
 
 # Packrat gives a massive performance increase.
@@ -593,13 +597,14 @@ parse_actions = {
     arguments: model.Arguments,
     arguments_list: model.ArgumentsList,
     array: model.Array,
-    expression_statement: model.Statement,
+    case: model.Case,
     catch: model.Catch,
     classdef: model.Classdef,
     code: model.Code,
     command: model.Command,
     command_identifier: model.Literal,
     comment: model.Comment,
+    expression_statement: model.Statement,
     statement_delimiter: model.Literal,
     element_delimiter: model.Literal,
     else_: model.Else,
@@ -618,9 +623,9 @@ parse_actions = {
     properties: model.Properties,
     string: model.Literal,
     switch: model.Switch,
-    switch_case: model.Case,
-    switch_otherwise: model.Case,
+    switch_body: model.SwitchBody,
     try_: model.Try,
+    otherwise: model.Case,
     while_: model.WhileLoop,
     ws: model.Literal,
 }

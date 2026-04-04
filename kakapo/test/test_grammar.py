@@ -376,7 +376,7 @@ def test_classdef(string):
     "string",
     (
         "switch x\n end",
-        "switch x\n case 1\n otherwise \n b \n end",
+        "switch x\n case 1\n case abc\n func()\n otherwise \n b \n end",
     ),
 )
 def test_switch(string):

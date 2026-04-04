@@ -177,7 +177,6 @@ def test_ensure_empty_line_before_comment(input_: str, expected: str):
     "string, expected",
     (
         (" x", "x"),
-        ("case a\nb", "case a\n    b"),
         ("try\na\n b\n end", "try\n    a\n    b\nend"),
         ("if true\na;\n\nb\nend", "if true\n    a;\n\n    b\nend"),
         ("if 1\na\nelse\nb\nend", "if 1\n    a\nelse\n    b\nend"),
@@ -185,6 +184,10 @@ def test_ensure_empty_line_before_comment(input_: str, expected: str):
         ("if 1\na % com\nend", "if 1\n    a % com\nend"),
         ("if 1\n% com\nend", "if 1\n    % com\nend"),
         ("a;\n%c", "a;\n%c"),
+        (
+            "switch x\ncase 1\na\ncase 2\nb\notherwise\nb\nend",
+            "switch x\n    case 1\n        a\n    case 2\n        b\n    otherwise\n        b\nend",
+        ),
     )
 )
 def test_normalize_indentation(string: str, expected: str):
