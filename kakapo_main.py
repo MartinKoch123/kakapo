@@ -30,6 +30,9 @@ def main():
     elif path.is_dir():
         for file_path in path.glob("**/*.m"):
             success = format_file(file_path)
+    else:
+        print("Path not found.")
+        success = False
     if success:
         print("Ching!")
 
